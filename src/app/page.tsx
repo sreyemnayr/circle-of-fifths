@@ -7,6 +7,13 @@ import { useEffect, useState } from "react";
 import { OptionsSliders, IExampleTrack } from "@/components/OptionsSliders";
 import { keyString, upOneFifth, relativeKey } from "@/util/keys"
 
+import { useDebounce } from 'use-debounce';
+
+import Tabs from '@mui/joy/Tabs';
+import TabList from '@mui/joy/TabList';
+import Tab from '@mui/joy/Tab';
+import TabPanel from '@mui/joy/TabPanel';
+
 import {msToTime} from '@/util/time'
 
 import {TimeSignatureIcon} from '@/components/icons/TimeSignature'
@@ -176,7 +183,7 @@ export default function Home() {
   if (!session || session.status !== "authenticated") {
     return (
       <div>
-        <h1>Spotify Web API Typescript SDK in Next.js</h1>
+        <h1>Circle of Fifths</h1>
         <button onClick={() => signIn("spotify")}>Sign in with Spotify</button>
         
       </div>
@@ -191,9 +198,12 @@ export default function Home() {
     </div>
   );
 }
+
+
 function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [playlists, setPlaylists] = useState<SimplifiedPlaylist[]>([]);
   const [query, setQuery] = useState<string>("");
+  const [queryDebounced] = useDebounce(query, 1000)
   const [selected, setSelected] = useState<SimplifiedPlaylist | null>(null)
   const [tracks, setTracks] = useState<PlaylistedTrack<TrackItemWithAudioFeatures>[]>([])
   const [selectedTrack, setSelectedTrack] = useState<PlaylistedTrack<TrackItemWithAudioFeatures> | null>(null)
@@ -261,6 +271,24 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [startingFive, filters])
 
   useEffect(() => {
+
+    if(queryDebounced){
+      (async () => {
+        const results = await sdk.search(queryDebounced, ["track"]);
+        const playlistTracks = results.tracks.items.map((track) => {
+          return {
+            track: track
+          } as PlaylistedTrack<TrackItemWithAudioFeatures>
+        })
+        const tracks_with_data = await getTracksData(playlistTracks)
+        setTracks(tracks_with_data)
+      }
+      )()
+    }
+
+  }, [queryDebounced])
+
+  useEffect(() => {
     (async () => {
       
         // const results = await sdk.search(query, ["artist"]);
@@ -296,7 +324,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         setPlaylists(() => items);
       
     })();
-  }, [sdk, query]);
+  }, [sdk]);
 
   useEffect(()=>{
     if (popularTracks.length > 0) return
@@ -307,52 +335,102 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
     })()
   }, [sdk])
 
+  const [index, setIndex] = useState(1);
+
 
   return (
     <>
       <h1>Circle of Fifths</h1>
-      <div style={{width: "3em", height: "3em"}} onClick={()=>setDisplayOptions(c=>!c)}>
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 9.75V10.5" />
-      </svg>
-      </div>
-      <div >
-        {filterEmoji}
-      </div>
-      {displayOptions && (
+      
+
+      <Tabs aria-label="Basic tabs" 
+        value={index}
+        onChange={(event, value) => setIndex(value as number)}
+      >
+      <TabList>
+        <Tab>Vibes  { filterEmoji == "" ? (
+          <div style={{width: "2em", height: "2em"}}>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 13.5V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m12-3V3.75m0 9.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 3.75V16.5m-6-9V3.75m0 3.75a1.5 1.5 0 0 1 0 3m0-3a1.5 1.5 0 0 0 0 3m0 9.75V10.5" />
+            </svg>
+          </div>
+        ) : (
+          <span style={{display: "flex", justifyContent: "space-between"}}>{filterEmoji}</span>
+        )} </Tab>
+        
+        <Tab>Playlist Seed</Tab>
+        <Tab>Track Seed</Tab>
+        <Tab>Generate Playlist</Tab>
+      </TabList>
+      <TabPanel value={0}>
         <div >
-        {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
-        <OptionsSliders ignore={["key", "mode"]} setFilters={setFilters} setFilterEmoji={setFilterEmoji}
-        popular_tracks={popularTracks} />
-      </div>
-      
-      )}
-      
-      <div style={{color: "#fff"}}>{loading}</div>
-      <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Tracks</th>
-            <th>Selected</th>
-          </tr>
-        </thead>
-        <tbody>{playlists.map((playlist: SimplifiedPlaylist) => (
-          <tr key={playlist.id} onClick={() => setSelected(playlist)}>
-            <td>{playlist.name}</td>
-            <td>{playlist?.tracks?.total}</td>
-            <td>{selected?.id == playlist.id ? '✅' : ''}</td>
-          </tr>
-        ))}
-        </tbody>
-      </table>
-      <img src="/circle.jpg" style={{height: "400px", position: "sticky"}} />
-      <h2>Starting {startingFive.length} {msToTime(startingFive.map((track) => track.track.duration_ms).reduce((a, b) => a + b, 0))}</h2>
+          {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
+          <OptionsSliders ignore={["key", "mode"]} setFilters={setFilters} setFilterEmoji={setFilterEmoji}
+          popular_tracks={popularTracks} />
+        </div>
+      </TabPanel>
+
+      <TabPanel value={1}>
+        <div style={{color: "#fff"}}>{loading}</div>
+        
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Name</th>
+              <th>Tracks</th>
+              
+            </tr>
+          </thead>
+          <tbody>{playlists.map((playlist: SimplifiedPlaylist) => (
+            <tr key={playlist.id} onClick={() => {setSelected(playlist); setIndex(2)}}>
+              <td>{selected?.id == playlist.id ? '✅' : ''}</td>
+              <td>{playlist.name}</td>
+              <td>{playlist?.tracks?.total}</td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+      </TabPanel>
+      <TabPanel value={2}>
+        {selected?.id ? (
+          <div>
+            <h2>{selected.name} <span onClick={() => {setSelected(null); setTracks([])}}>X</span></h2> 
+            <h3>{selected.tracks?.total} Tracks</h3>
+          </div>
+        ) : (
+          <>
+          <h2>Search</h2>
+          <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} />
+          </>
+        )}
+        
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Artist</th>
+              <th>Key</th>
+              <th>Selected</th>
+            </tr>
+          </thead>
+          <tbody>{tracks.sort((a, b) => (a.track.features?.mode == 1 ? (a.track.features?.key || 0) : relativeKey(a.track.features?.key || 0, 0)) - (b.track.features?.mode == 1 ? (b.track.features?.key || 0) : relativeKey(b.track.features?.key || 0, 0))).map((track: PlaylistedTrack<TrackItemWithAudioFeatures>) => (
+            <tr key={`${track.track.id}-${track.track.features?.key}-${track.track.features?.mode}`} onClick={() => {setSelectedTrack(track); setIndex(3)}}>
+              <td>{track.track.name}</td>
+              <td>{'album' in track.track ? track.track.album.artists[0].name : 'N/A'}</td>
+              <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
+              <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
+            </tr>
+          ))}
+          </tbody>
+        </table>
+      </TabPanel>
+      <TabPanel value={3}>
+      <h2>{startingFive.length} Tracks | {msToTime(startingFive.map((track) => track.track.duration_ms).reduce((a, b) => a + b, 0))}</h2>
       <div onClick={async ()=> { 
         const user = await sdk.currentUser.profile()
         
-        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`); setQuery('Created')}} >Create Playlist</div>
+        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`); }} >Save Playlist</div>
       <table>
         <thead>
           <tr>
@@ -372,25 +450,14 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         ))}
         </tbody>
       </table>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Artist</th>
-            <th>Key</th>
-            <th>Selected</th>
-          </tr>
-        </thead>
-        <tbody>{tracks.sort((a, b) => (a.track.features?.mode == 1 ? (a.track.features?.key || 0) : relativeKey(a.track.features?.key || 0, 0)) - (b.track.features?.mode == 1 ? (b.track.features?.key || 0) : relativeKey(b.track.features?.key || 0, 0))).map((track: PlaylistedTrack<TrackItemWithAudioFeatures>) => (
-          <tr key={`${track.track.id}-${track.track.features?.key}-${track.track.features?.mode}`} onClick={() => setSelectedTrack(track)}>
-            <td>{track.track.name}</td>
-            <td>{'album' in track.track ? track.track.album.artists[0].name : 'N/A'}</td>
-            <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
-            <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
-          </tr>
-        ))}
-        </tbody>
-      </table>
+      </TabPanel>
+    </Tabs>
+
+      
+      
+      <img src="/circle.jpg" style={{height: "400px", position: "sticky"}} />
+      
+      
     </>
   );
 }

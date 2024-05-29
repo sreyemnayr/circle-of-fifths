@@ -13,6 +13,7 @@ import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
+import Button from '@mui/joy/Button';
 
 import {msToTime} from '@/util/time'
 
@@ -31,6 +32,7 @@ const allow_explicit = true;
 
 
 const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[], name: string = "Circle of Fifths") => {
+  
   const playlist = await sdk.playlists.createPlaylist(user_id, {name})
   
   const promises = []
@@ -217,6 +219,8 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   const [filterEmoji, setFilterEmoji] = useState<string>("")
 
+  const [requeryPlaylists, setRequeryPlaylists] = useState<number>(1)
+
   useEffect(()=>{
     (async () => {
       if(selected) {
@@ -289,7 +293,8 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [queryDebounced])
 
   useEffect(() => {
-    (async () => {
+    if(sdk && requeryPlaylists){
+      (async () => {
       
         // const results = await sdk.search(query, ["artist"]);
         let limit: MaxInt<50> = 50
@@ -298,33 +303,19 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         let total: number = 1
         while(total > offset) {
           const results = await sdk.currentUser.playlists.playlists(limit, offset);
-          // for(const item of results.items) {
-          //   items.push(await sdk.playlists.getPlaylist(item.id))
-          // }
           items.push(...results.items)
           total = results.total
           offset += limit
         }
         console.log(items)
 
-        // for(const item of items) {
-        //   console.log(item.name)
-        //   let limit: MaxInt<50> = 50
-        //   let offset = 50
-        //   let total = item.tracks.total
-        //   let tracks: PlaylistedTrack<TrackItem>[] = item.tracks.items
-        //   while(total > limit * offset) {
-        //     const results = await sdk.playlists.getPlaylistItems(item.id, undefined, undefined, limit, offset)
-        //     tracks.push(...results.items)
-        //     offset += limit
-        //   }
-        //   console.log(tracks)
-        // }
-
         setPlaylists(() => items);
       
     })();
-  }, [sdk]);
+
+    }
+    
+  }, [sdk, requeryPlaylists]);
 
   useEffect(()=>{
     if (popularTracks.length > 0) return
@@ -427,10 +418,16 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       </TabPanel>
       <TabPanel value={3}>
       <h2>{startingFive.length} Tracks | {msToTime(startingFive.map((track) => track.track.duration_ms).reduce((a, b) => a + b, 0))}</h2>
-      <div onClick={async ()=> { 
+      <Button
+        loading={loading != ""}
+        onClick={async ()=> { 
         const user = await sdk.currentUser.profile()
-        
-        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`); }} >Save Playlist</div>
+        setLoading("Saving playlist");
+        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`);
+        setLoading("");
+        setStartingFive([])
+        setRequeryPlaylists((cur) => cur + 1)
+         }} >{loading ? loading : "Save Playlist"}</Button>
       <table>
         <thead>
           <tr>

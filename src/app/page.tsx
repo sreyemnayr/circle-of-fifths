@@ -1,11 +1,18 @@
 "use client";
 
-import { SearchResults, SimplifiedPlaylist, Playlist, SpotifyApi, MaxInt, TrackItem, AudioFeatures, AudioAnalysis, PlaylistedTrack, RecommendationsRequest } from "@spotify/web-api-ts-sdk"; // use "@spotify/web-api-ts-sdk" in your own project
+import { SearchResults, 
+  PartialSearchResult,
+  Page,
+  Market,
+  ItemTypes,
+  SimplifiedPlaylist, Playlist, SpotifyApi, MaxInt, TrackItem, AudioFeatures, AudioAnalysis, PlaylistedTrack, RecommendationsRequest, RecommendationsResponse } from "@spotify/web-api-ts-sdk"; // use "@spotify/web-api-ts-sdk" in your own project
 import sdk from "@/lib/spotify-sdk/ClientInstance";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { OptionsSliders, IExampleTrack } from "@/components/OptionsSliders";
 import { keyString, upOneFifth, relativeKey } from "@/util/keys"
+
+import { RateLimit } from 'async-sema';
 
 import { useDebounce } from 'use-debounce';
 
@@ -29,24 +36,35 @@ type TrackItemWithAudioFeatures = TrackItem & {
 
 const allow_explicit = true;
 
+const rate_limiter = RateLimit(20, {timeUnit: 10000});
 
+/**
+ * Wraps a function with a rate limiter
+ * @param func The function to wrap
+ * @param args The arguments to pass to the function
+ * @returns The result of the function
+ */
+const doWithRateLimiter = async (func: (...args: any[]) => Promise<any>, args: any[]) => {
+  await rate_limiter();
+  return func(...args);
+}
 
 const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[], name: string = "Circle of Fifths") => {
   
-  const playlist = await sdk.playlists.createPlaylist(user_id, {name})
+  const playlist: Playlist<TrackItem> = await doWithRateLimiter((user_id: string, request: CreatePlaylistRequest) => sdk.playlists.createPlaylist(user_id, request), [user_id, {name}])
   
-  const promises = []
+  const results = []
   for (let i = 0; i < tracks.length; i += 100) {
     const chunk = tracks.slice(i, i + 100)
-    promises.push(sdk.playlists.addItemsToPlaylist(playlist.id, chunk.map((track) => track.track.uri)))
+    results.push(await doWithRateLimiter((playlist_id: string, uris?: string[] | undefined, position?: number | undefined) => sdk.playlists.addItemsToPlaylist(playlist_id, uris, position), [playlist.id, chunk.map((track) => track.track.uri)]))
   }
   
-  const results = await Promise.allSettled(promises)
+  // const results = await Promise.allSettled(promises)
   return results 
 }
 
 const getTrackData = async (track: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
-  let trackInfo = await sdk.tracks.audioFeatures(track.track.id)
+  let trackInfo: AudioFeatures = await doWithRateLimiter((params: string) => sdk.tracks.audioFeatures(params), [track.track.id])
   track.track.features = trackInfo
 }
 
@@ -56,7 +74,7 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
   const promises = []
   for (let i = 0; i < track_ids.length; i += 100) {
     const chunk = track_ids.slice(i, i + 100)
-    promises.push(sdk.tracks.audioFeatures(chunk))
+    promises.push(doWithRateLimiter((params: string[]) => sdk.tracks.audioFeatures(params), [chunk]))
   }
   
   const results = await Promise.allSettled(promises)
@@ -83,7 +101,7 @@ const nextKeys = (track: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
 const getPopularExamples = async() => {
   console.log("Getting popular examples")
   const all_results = Promise.all([0, 20, 40, 50, 60, 70, 80, 90].map(async(popularity)=> {
-    const results = await sdk.recommendations.get({limit: 10, seed_genres: ["pop"], target_popularity: popularity})
+    const results = await doWithRateLimiter((params: RecommendationsRequest) => sdk.recommendations.get(params), [{limit: 10, seed_genres: ["pop"], target_popularity: popularity}])
     return {
       value: results.tracks[0].popularity,
       name: results.tracks[0].name,
@@ -103,7 +121,7 @@ const getNextTracks = async (seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[
   let next_key = nextKeys(seeds[seeds.length - 1])
   // const next_tracks_minor = await sdk.recommendations.get({seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), target_key: next_key[0], target_mode: 0})
   // const next_tracks_major = await sdk.recommendations.get({seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), target_key: next_key[1], target_mode: 1})
-  const next_tracks_batch = await sdk.recommendations.get({...filters, seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), limit: 100})
+  const next_tracks_batch: RecommendationsResponse = await doWithRateLimiter((params: RecommendationsRequest) => sdk.recommendations.get(params), [{seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), limit: 100, ...filters}])
   // const next_tracks = [...next_tracks_minor.tracks, ...next_tracks_major.tracks].filter((t)=>!seed_ids.includes(t.id) && t.album.artists[0].name != last_artist)
   const next_tracks = next_tracks_batch.tracks.filter((t)=>!seed_ids.includes(t.id) && !seed_artists.includes(t.album.artists[0].name) && (allow_explicit || !t.explicit)).map((t) => ({
     track: t,
@@ -202,6 +220,14 @@ export default function Home() {
 }
 
 
+interface CreatePlaylistRequest {
+  name: string;
+  public?: boolean;
+  collaborative?: boolean;
+  description?: string;
+}
+
+
 function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [playlists, setPlaylists] = useState<SimplifiedPlaylist[]>([]);
   const [query, setQuery] = useState<string>("");
@@ -226,7 +252,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       if(selected) {
       console.log(selected.name)
           setLoading("Loading playlist data")
-          let item = await sdk.playlists.getPlaylist(selected.id)
+          let item = await doWithRateLimiter((params: string) => sdk.playlists.getPlaylist(params), [selected.id])
           setLoading("")
           console.log(item)
           let total = item.tracks.total
@@ -236,7 +262,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           setLoading("Loading playlist tracks")
           while(total > offset) {
             
-            const results = await sdk.playlists.getPlaylistItems(selected.id, undefined, "items(added_by.id,track(name,href,album(name,href,artists(name))))", limit, offset)
+            const results = await doWithRateLimiter((playlist_id: string, market?: Market, fields?: string, limit?: MaxInt<50>, offset?: number) => sdk.playlists.getPlaylistItems(playlist_id, market, fields, limit, offset), [selected.id, undefined, "items(added_by.id,track(name,href,album(name,href,artists(name))))", limit, offset])
             playlistTracks.push(...results.items)
             offset += limit
           }
@@ -257,7 +283,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
     (async () => {
       if(selectedTrack) {
         console.log(selectedTrack)
-        let trackInfo = await sdk.tracks.audioFeatures(selectedTrack.track.id)
+        let trackInfo = await doWithRateLimiter((params: string) => sdk.tracks.audioFeatures(params), [selectedTrack.track.id])
         console.log(trackInfo)
         setStartingFive(chooseStartingFive(tracks, selectedTrack))
       }
@@ -278,7 +304,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
     if(queryDebounced){
       (async () => {
-        const results = await sdk.search(queryDebounced, ["track"]);
+        const results: Required<Pick<PartialSearchResult, "tracks">> = await doWithRateLimiter((q: string, types: ItemTypes[]) => sdk.search(q, types), [queryDebounced, ["track"]]);
         const playlistTracks = results.tracks.items.map((track) => {
           return {
             track: track
@@ -293,7 +319,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [queryDebounced])
 
   useEffect(() => {
-    if(sdk && requeryPlaylists){
+    if(sdk && sdk.currentUser && requeryPlaylists){
       (async () => {
       
         // const results = await sdk.search(query, ["artist"]);
@@ -302,7 +328,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         const items: SimplifiedPlaylist[] = []
         let total: number = 1
         while(total > offset) {
-          const results = await sdk.currentUser.playlists.playlists(limit, offset);
+          const results: Page<SimplifiedPlaylist> = await doWithRateLimiter((limit: MaxInt<50>, offset: number) => sdk.currentUser.playlists.playlists(limit, offset), [limit, offset]);
           items.push(...results.items)
           total = results.total
           offset += limit
@@ -318,13 +344,23 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [sdk, requeryPlaylists]);
 
   useEffect(()=>{
-    if (popularTracks.length > 0) return
-    (async () => {
-      const results = await getPopularExamples()
-      console.log("getPopularExamples", results)
-      setPopularTracks(results)
-    })()
-  }, [sdk])
+    console.log("Triggering check for popular tracks");
+    console.log(popularTracks);
+    if (sdk && !popularTracks.length && !loading) {
+      setLoading("Getting popular tracks")
+      console.log("Getting popular tracks");
+      
+      (async () => {
+        
+        const results = await getPopularExamples()
+        setPopularTracks(results)
+        setLoading("");
+        console.log("getPopularExamples", results)
+      })()
+
+    }
+    
+  }, [sdk, popularTracks, loading])
 
   const [index, setIndex] = useState(1);
 
@@ -421,7 +457,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       <Button
         loading={loading != ""}
         onClick={async ()=> { 
-        const user = await sdk.currentUser.profile()
+        const user = await doWithRateLimiter(() => sdk.currentUser.profile(), [])
         setLoading("Saving playlist");
         await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`);
         setLoading("");

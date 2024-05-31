@@ -657,15 +657,28 @@ export const OptionsSliders = ({ignore = [], setFilters, popular_tracks, setFilt
                   >
                     <div style={{width: 200, display: "flex", flexDirection: "column"}}>
                     <Select onChange={(e, v) => setActiveOption(v as OptionSettings)} value={activeOption}>
-                    {options.filter((option) => !ignore.includes(option.key)).map((option) => {
+                    {options.filter((option) => !ignore.includes(option.key)).toSorted((a, b) => Number(b.range[0] !== b.value?.[0] || b.range[1] !== b.value?.[1]) - (Number(a.range[0] !== a.value?.[0] || a.range[1] !== a.value?.[1]))).map((option) => {
                         return <Option
                         key={option.key}
                         value={option}
+                        style={{
+                            fontWeight: (option.range[0] !== option.value?.[0] || option.range[1] !== option.value?.[1]) ? 700 : 400
+                        }}
                         >
                             {[...displayOption(option, option?.range?.[0] || 0)].slice(0,1)}{[...displayOption(option, option?.range?.[1] || 1)].slice(0,1)} {option.label}
                         </Option>
                     })}
                     </Select>
+                    {(activeOption.range[0] !== activeOption.value?.[0] || activeOption.range[1] !== activeOption.value?.[1]) && (
+                        <Button onClick={(e) => setOptions((cur)=>{
+                            const updateOption = cur.find((c) => c.key === activeOption.key)
+                            
+                            if (updateOption) {
+                                updateOption.value = updateOption.range
+                            }
+                            return [...cur]
+                        })}>Reset</Button>
+                    )}
                       <FormHelperText sx={{ mt: 0 }}>{activeOption.description}</FormHelperText>
                       <Switch
                       
@@ -752,14 +765,7 @@ export const OptionsSliders = ({ignore = [], setFilters, popular_tracks, setFilt
                         }}
                       />
                     
-                      <Button onClick={(e) => setOptions((cur)=>{
-                        const updateOption = cur.find((c) => c.key === activeOption.key)
-                        
-                        if (updateOption) {
-                            updateOption.value = updateOption.range
-                        }
-                        return [...cur]
-                    })}>Reset</Button>
+                      
                     </div>
                     <RangeSlider option={activeOption} value={activeOption.value} onChange={(e) => setOptions((cur)=>{
                         const updateOption = cur.find((c) => c.key === activeOption.key)

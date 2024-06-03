@@ -417,7 +417,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               <th></th>
               <th>Name</th>
               <th>Tracks</th>
-              
+              <th>Link</th>
             </tr>
           </thead>
           <tbody>{playlists.map((playlist: SimplifiedPlaylist) => (
@@ -425,6 +425,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               <td>{selected?.id == playlist.id ? '✅' : ''}</td>
               <td>{playlist.name}</td>
               <td>{playlist?.tracks?.total}</td>
+              <td><a href={playlist.external_urls.spotify} target="_blank"><img src="/spotify_icon.png" style={{height: "20px"}} /></a></td>
             </tr>
           ))}
           </tbody>
@@ -446,18 +447,20 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         <table>
           <thead>
             <tr>
+              <th></th>
               <th>Name</th>
               <th>Artist</th>
               <th>Key</th>
-              <th>Selected</th>
+              <th>Link</th>
             </tr>
           </thead>
           <tbody>{tracks.sort((a, b) => (a.track.features?.mode == 1 ? (a.track.features?.key || 0) : relativeKey(a.track.features?.key || 0, 0)) - (b.track.features?.mode == 1 ? (b.track.features?.key || 0) : relativeKey(b.track.features?.key || 0, 0))).map((track: PlaylistedTrack<TrackItemWithAudioFeatures>) => (
             <tr key={`${track.track.id}-${track.track.features?.key}-${track.track.features?.mode}`} onClick={() => {setSelectedTrack(track); setIndex(3)}}>
+              <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
               <td>{track.track.name}</td>
               <td>{'album' in track.track ? track.track.album.artists[0].name : 'N/A'}</td>
               <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
-              <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
+              <td><a href={track.track.external_urls.spotify} target="_blank">Open in Spotify</a></td>
             </tr>
           ))}
           </tbody>

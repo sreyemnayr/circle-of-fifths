@@ -22,6 +22,10 @@ import Tab from '@mui/joy/Tab';
 import TabPanel from '@mui/joy/TabPanel';
 import Button from '@mui/joy/Button';
 
+import Modal from '@mui/joy/Modal';
+import ModalDialog from '@mui/joy/ModalDialog';
+import ModalClose from '@mui/joy/ModalClose';
+
 import {msToTime} from '@/util/time'
 
 import {TimeSignatureIcon} from '@/components/icons/TimeSignature'
@@ -199,24 +203,34 @@ const chooseStartingFive = (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[
 
 export default function Home() {
   const session = useSession();
-
-  if (!session || session.status !== "authenticated") {
-    return (
-      <div>
-        <h1>Circle of Fifths</h1>
-        <button onClick={() => signIn("spotify")}>Sign in with Spotify</button>
-        
-      </div>
-    );
-  }
+  const [displayOptions, setDisplayOptions] = useState<boolean>(false)
 
   return (
-    <div>
-      <p>Logged in as {session.data.user?.name}</p>
-      <button onClick={() => signOut()}>Sign out</button>
-      <SpotifySearch sdk={sdk} />
-    </div>
-  );
+    <>
+    <Modal open={displayOptions} onClose={() => setDisplayOptions(false)}>
+      <ModalDialog>
+        <ModalClose />
+        <img src="/circle.jpg" style={{maxHeight: "80vw", maxWidth: "80vh", aspectRatio: "1"}} />
+      </ModalDialog>
+      </Modal>
+
+      <h1 style={{fontSize: "2.5rem", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center"}}>Circle of Fifths <span style={{paddingLeft: "14px", display: "inline-flex", flexDirection:"column", fontSize: "0.5rem", justifyContent: "center", alignItems: "center"}}><span>Powered by</span><img src="/spotify.png" style={{height: "70px"}} /></span>
+      </h1>
+      <div style={{padding: "0 5vw"}}>Given a seed track and optional vibes settings, this app will generate a long (~200 tracks) playlist with <em>no repeated tracks</em> that starts in the key of the seed track and follows the <div style={{display: "inline-block", fontWeight: "bold", textDecoration: "underline", cursor: "pointer"}} onClick={() => setDisplayOptions(true)}>circle of fifths</div>. You can find your seed track by either loading existing playlists or searching. </div>
+      
+    {!session || session.status != "authenticated" ? <>
+    <Button color="success" onClick={() => signIn("spotify")}>Authenticate with Spotify</Button>
+    </> : <>
+    <SpotifySearch sdk={sdk} />
+      <p> <Button color="danger" onClick={() => signOut()}>Logged into Spotify as {session.data.user?.name}. Click to sign out.</Button></p>
+      
+    </>}
+    <div style={{padding: "0 5vw"}}>Made with ❤️ by <a href="https://twitter.com/sreyemnayr">Ryan Meyers</a></div>
+    <div style={{fontSize: "0.7rem", padding: "0 5vw"}}>Special thanks to Tim Williamson of The Nieux Society for inspiring this app with his deep and unrelenting love of Yacht Rock.</div>
+    
+    </>
+  )
+
 }
 
 
@@ -240,7 +254,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   const [startingFive, setStartingFive] = useState<PlaylistedTrack<TrackItemWithAudioFeatures>[]>([])
 
-  const [displayOptions, setDisplayOptions] = useState<boolean>(false)
+  
   const [popularTracks, setPopularTracks] = useState<IExampleTrack[]>([])
 
   const [filterEmoji, setFilterEmoji] = useState<string>("")
@@ -367,9 +381,6 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   return (
     <>
-      <h1>Circle of Fifths</h1>
-      
-
       <Tabs aria-label="Basic tabs" 
         value={index}
         onChange={(event, value) => setIndex(value as number)}
@@ -488,7 +499,6 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
       
       
-      <img src="/circle.jpg" style={{height: "400px", position: "sticky"}} />
       
       
     </>

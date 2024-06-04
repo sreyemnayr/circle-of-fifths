@@ -1,11 +1,11 @@
 "use client"
-
+import * as React from 'react';
 import Box from '@mui/joy/Box';
 import Slider from '@mui/joy/Slider';
 import FormControl from '@mui/joy/FormControl';
-import FormLabel from '@mui/joy/FormLabel';
+
 import FormHelperText from '@mui/joy/FormHelperText';
-import { Mark } from '@mui/base/useSlider/useSlider.types'
+import { Mark } from '@mui/base/useSlider'
 
 import {useState, useEffect, Dispatch, SetStateAction, Fragment} from 'react';
 import { RecommendationsRequest } from '@spotify/web-api-ts-sdk';
@@ -18,10 +18,6 @@ import Typography from '@mui/joy/Typography';
 
 import {msToTime, msToMinutes} from '@/util/time'
 
-function valueText(value: number) {
-  return `${value}`;
-}
-
 export const RangeSlider = ({option, value=[0.0,1.0], onChange, marks }: {option: OptionSettings, value?: [number, number], onChange: (value: number[]) => void, marks?: Mark[]}) => {
   // const [value, setValue] = React.useState<number[]>([20, 37]);
   // const [value, setValue] = React.useState<number[]>([20, 37]);
@@ -30,7 +26,7 @@ export const RangeSlider = ({option, value=[0.0,1.0], onChange, marks }: {option
   const [displayValue, setDisplayValue] = useState<[number, number]>(value)
   
 
-  const handleChange = (event: React.SyntheticEvent | Event, newValue: number | number[]) => {
+  const handleChange = (_event: React.SyntheticEvent | Event, newValue: number | number[]) => {
     setDisplayValue((option.target || option.exact) ? [newValue, newValue] as [number, number] : newValue as [number, number])
     onChange((option.target || option.exact) ? [newValue, newValue] as [number, number] : newValue as [number, number]);
   };
@@ -39,8 +35,8 @@ export const RangeSlider = ({option, value=[0.0,1.0], onChange, marks }: {option
     setDisplayValue(value as [number, number])
   }, [option.target, option.exact, value])
 
-  const display = (value: number | string) => {
-    return displayOption(option, parseFloat(value.toString()))
+  const display = (value: number, _index: number) => {
+    return displayOption(option, parseFloat(value.toString())) || ""
   }
 
   return (
@@ -49,7 +45,7 @@ export const RangeSlider = ({option, value=[0.0,1.0], onChange, marks }: {option
         getAriaLabel={() => option.label}
         orientation={"vertical"}
         value={option.target ? displayValue[0] : displayValue }
-        onChange={(e, newValue)=> setDisplayValue((option.target || option.exact) ? [newValue, newValue] as [number, number] : newValue as [number, number])}
+        onChange={(_e, newValue)=> setDisplayValue((option.target || option.exact) ? [newValue, newValue] as [number, number] : newValue as [number, number])}
         onChangeCommitted={handleChange}
         valueLabelDisplay="on"
         getAriaValueText={display}
@@ -117,8 +113,7 @@ const displayOption = (option: OptionSettings, value: number) => {
         }
     }
 
-    return value.toString()
-    
+    return value.toString() || ""
     
 }
 
@@ -581,7 +576,7 @@ export const OptionsSliders = ({ignore = [], setFilters, popular_tracks, setFilt
     useEffect(()=>{
 
         if(!activeOption){
-            setActiveOption(options[0])
+            setActiveOption(options[0] || null)
         }
 
         setFilters((cur) => {
@@ -656,7 +651,7 @@ export const OptionsSliders = ({ignore = [], setFilters, popular_tracks, setFilt
                     key={`${activeOption.key}_${activeOption.value?.[0]}_${activeOption.value?.[1]}`}
                   >
                     <div style={{width: 200, display: "flex", flexDirection: "column"}}>
-                    <Select onChange={(e, v) => setActiveOption(v as OptionSettings)} value={activeOption}>
+                    <Select onChange={(_e, v) => setActiveOption(v as OptionSettings)} value={activeOption}>
                     {options.filter((option) => !ignore.includes(option.key)).toSorted((a, b) => Number(b.range[0] !== b.value?.[0] || b.range[1] !== b.value?.[1]) - (Number(a.range[0] !== a.value?.[0] || a.range[1] !== a.value?.[1]))).map((option) => {
                         return <Option
                         key={option.key}
@@ -665,12 +660,12 @@ export const OptionsSliders = ({ignore = [], setFilters, popular_tracks, setFilt
                             fontWeight: (option.range[0] !== option.value?.[0] || option.range[1] !== option.value?.[1]) ? 700 : 400
                         }}
                         >
-                            {[...displayOption(option, option?.range?.[0] || 0)].slice(0,1)}{[...displayOption(option, option?.range?.[1] || 1)].slice(0,1)} {option.label}
+                            {[...displayOption(option, option?.range?.[0] || 0) || ""].slice(0,1)}{[...displayOption(option, option?.range?.[1] || 1) || ""].slice(0,1)} {option.label}
                         </Option>
                     })}
                     </Select>
                     {(activeOption.range[0] !== activeOption.value?.[0] || activeOption.range[1] !== activeOption.value?.[1]) && (
-                        <Button onClick={(e) => setOptions((cur)=>{
+                        <Button onClick={(_e) => setOptions((cur)=>{
                             const updateOption = cur.find((c) => c.key === activeOption.key)
                             
                             if (updateOption) {

@@ -1,6 +1,8 @@
+import NextAuth, { NextAuthConfig, Account } from "next-auth"
+
 import spotifyProfile, { refreshAccessToken } from "@/SpotifyProfile";
-import { Account, NextAuthConfig } from "next-auth";
 import { JWT } from "next-auth/jwt";
+
 
 export type AuthUser = {
   name: string;
@@ -15,11 +17,14 @@ export type AuthUser = {
   id: string;
 };
 
-const authOptions: NextAuthConfig = {
+
+
+const authConfig: NextAuthConfig = {
   providers: [spotifyProfile],
   session: {
     maxAge: 60 * 60, // 1hr
   },
+  
   callbacks: {
     async jwt({ token, account }: { token: JWT; account: Account | null }) {
       if (!account) {
@@ -61,6 +66,6 @@ const authOptions: NextAuthConfig = {
   },
   debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-export default authOptions;
+}
+ 
+export const { auth, handlers, signIn, signOut } = NextAuth(authConfig)

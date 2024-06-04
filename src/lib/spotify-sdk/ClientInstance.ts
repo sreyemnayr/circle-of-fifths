@@ -7,7 +7,7 @@ import {
   SdkOptions,
   SpotifyApi,
 } from "@spotify/web-api-ts-sdk"; // use "@spotify/web-api-ts-sdk" in your own project
-import { AuthUser } from "@/app/api/auth/[...nextauth]/authOptions";
+import { AuthUser } from "@/auth";
 import { getSession, signIn } from "next-auth/react";
 
 /**
@@ -45,7 +45,7 @@ class NextAuthStrategy implements IAuthStrategy {
     console.warn("[Spotify-SDK][WARN]\nremoveAccessToken not implemented");
   }
 
-  public setConfiguration(configuration: SdkConfiguration): void {
+  public setConfiguration(_configuration: SdkConfiguration): void {
     console.warn("[Spotify-SDK][WARN]\nsetConfiguration not implemented");
   }
 }

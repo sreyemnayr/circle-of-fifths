@@ -1,7 +1,7 @@
-import authOptions from "@/app/api/auth/[...nextauth]/authOptions";
-// import "@/app/globals.css";
+// import authOptions from "@/app/api/auth/[...nextauth]/authOptions";
+import "@/app/globals.css";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
-import { getServerSession } from "next-auth";
+import { auth } from "@/auth"
 import { Inter } from "next/font/google";
 
 import Sheet from '@mui/joy/Sheet';
@@ -14,16 +14,17 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getServerSession(authOptions);
+  // const session = await getServerSession(authOptions);
+  const session = await auth();
 
   return (
     <html lang="en">
       <AuthSessionProvider session={session}>
-      
-      <body className={inter.className}><Sheet color="neutral" >{children}</Sheet></body>
+      <body className={inter.className} style={{overflow: "scroll"}}>
+      <Sheet color="neutral" >{children}</Sheet>
       {/* The rest of your application */}
 
-        
+      </body>
       </AuthSessionProvider>
     </html>
   );

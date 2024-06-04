@@ -5,7 +5,9 @@ import { SessionProvider } from "next-auth/react";
 import React from "react";
 import { CssVarsProvider } from '@mui/joy/styles';
 import CssBaseline from '@mui/joy/CssBaseline';
-import getInitColorSchemeScript from "@mui/system/cssVars/getInitColorSchemeScript";
+//import getInitColorSchemeScript from "@mui/system/cssVars/getInitColorSchemeScript";
+import { getInitColorSchemeScript } from '@mui/joy/styles';
+import Button from '@mui/joy/Button';
 
 function AuthSessionProvider({
   session,
@@ -24,12 +26,16 @@ function AuthSessionProvider({
       // to avoid layout shift, render a placeholder button
       return <SessionProvider session={session}>
       
-              {children}
+              {/* {children} */}
+              <body>
+                <Button>Sign in</Button>
+              </body>
+              
       
       </SessionProvider>;
     }
 
-  return <SessionProvider session={session}>
+  return (
     <CssVarsProvider defaultMode="dark">
       {/* must be used under CssVarsProvider */}
       
@@ -43,9 +49,12 @@ function AuthSessionProvider({
               // All options that you pass to CssVarsProvider you should also pass here.
               defaultMode: "dark",
             })}
-            {children}
+            <SessionProvider session={session}>
+              {children}
+            </SessionProvider>
+            
     </CssVarsProvider>
-  </SessionProvider>;
+  );
 }
 
 export default AuthSessionProvider;

@@ -1,11 +1,15 @@
 "use client";
 
-import { SearchResults, 
+import { // SearchResults, 
   PartialSearchResult,
   Page,
   Market,
   ItemTypes,
-  SimplifiedPlaylist, Playlist, SpotifyApi, MaxInt, TrackItem, AudioFeatures, AudioAnalysis, PlaylistedTrack, RecommendationsRequest, RecommendationsResponse } from "@spotify/web-api-ts-sdk"; // use "@spotify/web-api-ts-sdk" in your own project
+  SimplifiedPlaylist, Playlist, SpotifyApi, MaxInt, TrackItem, AudioFeatures, 
+  Track,
+  // AudioAnalysis, 
+  PlaylistedTrack, RecommendationsRequest, RecommendationsResponse 
+} from "@spotify/web-api-ts-sdk"; // use "@spotify/web-api-ts-sdk" in your own project
 import sdk from "@/lib/spotify-sdk/ClientInstance";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
@@ -15,7 +19,7 @@ import { keyString, upOneFifth, relativeKey } from "@/util/keys"
 import { RateLimit } from 'async-sema';
 
 import { useDebounce } from 'use-debounce';
-
+import Alert from '@mui/joy/Alert';
 import Tabs from '@mui/joy/Tabs';
 import TabList from '@mui/joy/TabList';
 import Tab from '@mui/joy/Tab';
@@ -28,15 +32,20 @@ import ModalClose from '@mui/joy/ModalClose';
 
 import {msToTime} from '@/util/time'
 
-import {TimeSignatureIcon} from '@/components/icons/TimeSignature'
-import { DanceIcon } from "@/components/icons/Dance";
-import { EnergyIcon } from "@/components/icons/Energy";
-import { GuitarIcon } from "@/components/icons/Guitar"
+// import {TimeSignatureIcon} from '@/components/icons/TimeSignature'
+// import { DanceIcon } from "@/components/icons/Dance";
+// import { EnergyIcon } from "@/components/icons/Energy";
+// import { GuitarIcon } from "@/components/icons/Guitar"
 
 
 type TrackItemWithAudioFeatures = TrackItem & {
   features?: AudioFeatures;
 };
+
+// Define a type guard to check if the item is a TrackItem
+function isTrack(item: any): item is Track {
+  return (item as Track).album !== undefined;
+}
 
 const allow_explicit = true;
 
@@ -48,9 +57,14 @@ const rate_limiter = RateLimit(20, {timeUnit: 10000});
  * @param args The arguments to pass to the function
  * @returns The result of the function
  */
-const doWithRateLimiter = async (func: (...args: any[]) => Promise<any>, args: any[]) => {
+const doWithRateLimiter = async (func: (...args: any[]) => Promise<any>, args: any[], setWarning: (warning: string) => void = (s) => {console.log(s)}) => {
   await rate_limiter();
-  return func(...args);
+  try {
+    return func(...args);
+  } catch (e: any) {
+    setWarning(e.message)
+  }
+  
 }
 
 const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[], name: string = "Circle of Fifths") => {
@@ -67,10 +81,10 @@ const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemW
   return results 
 }
 
-const getTrackData = async (track: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
-  let trackInfo: AudioFeatures = await doWithRateLimiter((params: string) => sdk.tracks.audioFeatures(params), [track.track.id])
-  track.track.features = trackInfo
-}
+// const getTrackData = async (track: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
+//   let trackInfo: AudioFeatures = await doWithRateLimiter((params: string) => sdk.tracks.audioFeatures(params), [track.track.id])
+//   track.track.features = trackInfo
+// }
 
 const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[]) => {
   const track_ids = tracks.map((track)=>track.track.id)
@@ -96,7 +110,10 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
   return tracks
 }
 
-const nextKeys = (track: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
+const nextKeys = (track: PlaylistedTrack<TrackItemWithAudioFeatures> | undefined) => {
+  if (!track){
+    return [0, 0]
+  }
   const key = track.track.features?.key || 0
   const mode = track.track.features?.mode || 0
   return upOneFifth(key, mode)
@@ -118,16 +135,16 @@ const getPopularExamples = async() => {
 
 const getNextTracks = async (seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[], filters: RecommendationsRequest = {}) => {
   const seed_ids = seeds.map((s)=>s.track.id)
-  const seed_artists = seeds.slice(-5).map((s)=>'album' in s.track ? s.track.album.artists[0].name : '')
+  const seed_artists = seeds.slice(-5).map((s)=>'album' in s.track ? s?.track?.album?.artists[0]?.name : '')
   console.log("Seed artists", seed_artists)
-  const last_track = seeds[seeds.length-1]
-  const last_artist = 'album' in last_track.track ? last_track.track.album.artists[0].name : 'N/A'
+  // const last_track = seeds[seeds.length-1]
+  // const last_artist = 'album' in last_track.track ? last_track.track.album.artists[0].name : 'N/A'
   let next_key = nextKeys(seeds[seeds.length - 1])
   // const next_tracks_minor = await sdk.recommendations.get({seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), target_key: next_key[0], target_mode: 0})
   // const next_tracks_major = await sdk.recommendations.get({seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), target_key: next_key[1], target_mode: 1})
   const next_tracks_batch: RecommendationsResponse = await doWithRateLimiter((params: RecommendationsRequest) => sdk.recommendations.get(params), [{seed_tracks: seeds.slice(-5).map((seed) => seed.track.id), limit: 100, ...filters}])
   // const next_tracks = [...next_tracks_minor.tracks, ...next_tracks_major.tracks].filter((t)=>!seed_ids.includes(t.id) && t.album.artists[0].name != last_artist)
-  const next_tracks = next_tracks_batch.tracks.filter((t)=>!seed_ids.includes(t.id) && !seed_artists.includes(t.album.artists[0].name) && (allow_explicit || !t.explicit)).map((t) => ({
+  const next_tracks = next_tracks_batch.tracks.filter((t)=>!seed_ids.includes(t.id) && !seed_artists.includes(t?.album?.artists[0]?.name) && (allow_explicit || !t.explicit)).map((t) => ({
     track: t,
     added_at: "", // Placeholder or actual value
     added_by:  { 
@@ -144,18 +161,23 @@ const getNextTracks = async (seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[
   const add_to_playlist: PlaylistedTrack<TrackItemWithAudioFeatures>[] = []
   let keep_going = true
   while(keep_going) {
-    const tracks_in_key = next_tracks_data.filter((track) => !seed_ids.includes(track.track.id) && ('album' in track.track && !seed_artists.includes(track.track.album.artists[0].name)) && ((track.track.features?.key == next_key[0] && track.track.features?.mode == 0) || (track.track.features?.key == next_key[1] && track.track.features?.mode == 1)))
+    const tracks_in_key = next_tracks_data.filter((track) => !seed_ids.includes(track.track.id) && ('album' in track.track && !seed_artists.includes(track?.track?.album?.artists[0]?.name)) && ((track.track.features?.key == next_key[0] && track.track.features?.mode == 0) || (track.track.features?.key == next_key[1] && track.track.features?.mode == 1)))
     if(tracks_in_key.length == 0) {
       keep_going = false
     } else {
       const next_track = tracks_in_key[Math.floor(Math.random()*tracks_in_key.length)]
-      seed_ids.push(next_track.track.id)
-      seed_artists.push('album' in next_track.track ? next_track.track.album.artists[0].name : '')
-      console.log("Seed artists", seed_artists)
-      add_to_playlist.push(next_track)
-      console.log("Target key", keyString(next_key[0], 0), keyString(next_key[1], 1))
-      console.log("Next track", next_track.track.name, keyString(next_track.track.features?.key || 0, next_track.track.features?.mode || 0), keyString(relativeKey(next_track.track.features?.key || 0, next_track.track.features?.mode || 0), next_track.track.features?.mode == 1 ? 0 : 1))
-      next_key = nextKeys(next_track)
+      
+      if (next_track){
+        seed_ids.push(next_track?.track?.id || "")
+        seed_artists.push(isTrack(next_track?.track) ? next_track?.track?.album?.artists[0]?.name : '')
+        console.log("Seed artists", seed_artists)
+        add_to_playlist.push(next_track)
+        // console.log("Target key", keyString(next_key[0], 0), keyString(next_key[1], 1))
+        console.log("Next track", next_track.track.name, keyString(next_track.track.features?.key || 0, next_track.track.features?.mode || 0), keyString(relativeKey(next_track.track.features?.key || 0, next_track.track.features?.mode || 0), next_track.track.features?.mode == 1 ? 0 : 1))
+        next_key = nextKeys(next_track)
+
+      }
+      
     }
   }
   return add_to_playlist
@@ -181,8 +203,8 @@ const getNextTracks = async (seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[
 
 const chooseStartingFive = (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[], firstTrack: PlaylistedTrack<TrackItemWithAudioFeatures>) => {
   
-  const starting_key = firstTrack.track.features?.key || 0
-  const starting_mode = firstTrack.track.features?.mode || 0
+  // const starting_key = firstTrack.track.features?.key || 0
+  // const starting_mode = firstTrack.track.features?.mode || 0
 
   const seeds = [firstTrack]
 
@@ -207,12 +229,15 @@ export default function Home() {
 
   return (
     <>
-    <Modal open={displayOptions} onClose={() => setDisplayOptions(false)}>
+    {!!displayOptions && (
+      <Modal disableScrollLock open={displayOptions} onClose={() => setDisplayOptions(false)}>
       <ModalDialog>
         <ModalClose />
         <img src="/circle.jpg" style={{maxHeight: "80vw", maxWidth: "80vh", aspectRatio: "1"}} />
       </ModalDialog>
       </Modal>
+    )}
+    
 
       <h1 style={{fontSize: "2.5rem", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center"}}>Circle of Fifths <span style={{paddingLeft: "14px", display: "inline-flex", flexDirection:"column", fontSize: "0.5rem", justifyContent: "center", alignItems: "center"}}><span>Powered by</span><img src="/spotify.png" style={{height: "70px"}} /></span>
       </h1>
@@ -251,8 +276,11 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [selectedTrack, setSelectedTrack] = useState<PlaylistedTrack<TrackItemWithAudioFeatures> | null>(null)
   const [loading, setLoading] = useState<string>("")
   const [filters, setFilters] = useState<RecommendationsRequest>({limit: 100} as RecommendationsRequest)
+  const [warning, _setWarning] = useState<string>("")
 
   const [startingFive, setStartingFive] = useState<PlaylistedTrack<TrackItemWithAudioFeatures>[]>([])
+
+  const [burned, setBurned] = useState<boolean>(false)
 
   
   const [popularTracks, setPopularTracks] = useState<IExampleTrack[]>([])
@@ -263,59 +291,77 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   useEffect(()=>{
     (async () => {
-      if(selected) {
-      console.log(selected.name)
-          setLoading("Loading playlist data")
-          let item = await doWithRateLimiter((params: string) => sdk.playlists.getPlaylist(params), [selected.id])
-          setLoading("")
-          console.log(item)
-          let total = item.tracks.total
-          let limit: MaxInt<50> = item.tracks.limit as MaxInt<50>
-          let offset: number = item.tracks.offset + limit
-          let playlistTracks: PlaylistedTrack<TrackItemWithAudioFeatures>[] = item.tracks.items
-          setLoading("Loading playlist tracks")
-          while(total > offset) {
-            
-            const results = await doWithRateLimiter((playlist_id: string, market?: Market, fields?: string, limit?: MaxInt<50>, offset?: number) => sdk.playlists.getPlaylistItems(playlist_id, market, fields, limit, offset), [selected.id, undefined, "items(added_by.id,track(name,href,album(name,href,artists(name))))", limit, offset])
-            playlistTracks.push(...results.items)
-            offset += limit
+      try {
+        if(selected) {
+          console.log(selected.name)
+              setLoading("Loading playlist data")
+              let item = await doWithRateLimiter((params: string) => sdk.playlists.getPlaylist(params), [selected.id])
+              setLoading("")
+              console.log(item)
+              let total = item.tracks.total
+              let limit: MaxInt<50> = item.tracks.limit as MaxInt<50>
+              let offset: number = item.tracks.offset + limit
+              let playlistTracks: PlaylistedTrack<TrackItemWithAudioFeatures>[] = item.tracks.items
+              setLoading("Loading playlist tracks")
+              while(total > offset) {
+                
+                const results = await doWithRateLimiter((playlist_id: string, market?: Market, fields?: string, limit?: MaxInt<50>, offset?: number) => sdk.playlists.getPlaylistItems(playlist_id, market, fields, limit, offset), [selected.id, undefined, "items(added_by.id,track(name,href,album(name,href,artists(name))))", limit, offset])
+                playlistTracks.push(...results.items)
+                offset += limit
+              }
+              setLoading("")
+              setTracks(playlistTracks)
+    
+              const tracks_with_data = await getTracksData(playlistTracks)
+              setTracks(tracks_with_data.slice(0))
+              setLoading("")
+              
+              console.log(tracks)
+            }
+          } catch (e: any) {
+            _setWarning(e.message)
           }
-          setLoading("")
-          setTracks(playlistTracks)
 
-          const tracks_with_data = await getTracksData(playlistTracks)
-          setTracks(tracks_with_data.slice(0))
-          setLoading("")
-          
-          console.log(tracks)
-        }
+      
+      
     })()
 
   }, [selected])
 
+
   useEffect(() => {
     (async () => {
-      if(selectedTrack) {
+      try {
+        if(selectedTrack) {
         console.log(selectedTrack)
         let trackInfo = await doWithRateLimiter((params: string) => sdk.tracks.audioFeatures(params), [selectedTrack.track.id])
         console.log(trackInfo)
-        setStartingFive(chooseStartingFive(tracks, selectedTrack))
+          setStartingFive(chooseStartingFive(selected ? tracks : [selectedTrack], selectedTrack))
+        }
+      } catch (e: any) {
+        _setWarning(e.message)
       }
+      
     })()
   }, [selectedTrack])
 
   useEffect(() => {
     (async () => {
-      if(startingFive.length > 0 && startingFive.length < 200) {
-        const next_tracks = await getNextTracks(startingFive, filters)
-        setStartingFive((cur) => [...cur, ...next_tracks])
+      try {
+        if(startingFive.length > 0 && startingFive.length < 200) {
+          const next_tracks = await getNextTracks(startingFive, filters)
+          setStartingFive((cur) => [...cur, ...next_tracks])
+        }
+      } catch (e: any) {
+        _setWarning(e.message)
       }
+      
     })()
 
   }, [startingFive, filters])
 
   useEffect(() => {
-
+    try {
     if(queryDebounced){
       (async () => {
         const results: Required<Pick<PartialSearchResult, "tracks">> = await doWithRateLimiter((q: string, types: ItemTypes[]) => sdk.search(q, types), [queryDebounced, ["track"]]);
@@ -329,6 +375,9 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       }
       )()
     }
+  } catch (e: any) {
+    _setWarning(e.message)
+  }
 
   }, [queryDebounced])
 
@@ -341,15 +390,22 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         let offset = 0
         const items: SimplifiedPlaylist[] = []
         let total: number = 1
-        while(total > offset) {
-          const results: Page<SimplifiedPlaylist> = await doWithRateLimiter((limit: MaxInt<50>, offset: number) => sdk.currentUser.playlists.playlists(limit, offset), [limit, offset]);
-          items.push(...results.items)
-          total = results.total
-          offset += limit
-        }
-        console.log(items)
+        try {
+          while(total > offset) {
+          
+            const results: Page<SimplifiedPlaylist> = await doWithRateLimiter((limit: MaxInt<50>, offset: number) => sdk.currentUser.playlists.playlists(limit, offset), [limit, offset]);
+            items.push(...results.items)
+            total = results.total
+            offset += limit
+          }
+          console.log(items)
+  
+          setPlaylists(() => items);
 
-        setPlaylists(() => items);
+        } catch (e: any) {
+          _setWarning(e.message)
+        }
+        
       
     })();
 
@@ -366,10 +422,14 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       
       (async () => {
         
-        const results = await getPopularExamples()
+        try {
+          const results = await getPopularExamples()
         setPopularTracks(results)
         setLoading("");
         console.log("getPopularExamples", results)
+        } catch (e: any) {
+          _setWarning(e.message)
+        }
       })()
 
     }
@@ -381,9 +441,29 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   return (
     <>
+      {warning !== "" && (
+      <Alert variant="soft"
+        color="danger">{warning}
+        {warning == "The app has exceeded its rate limits." && (
+          <Button style={{color: "red"}} onClick={() => {
+            
+            if(!burned){
+              setBurned(true);
+              fetch("/api/burn").then(()=> {
+                signOut();
+                window.location.reload();
+              })
+            }
+            
+          }}>
+            Burn token and re-authenticate
+          </Button>
+        )}
+         </Alert>
+      )}
       <Tabs aria-label="Basic tabs" 
         value={index}
-        onChange={(event, value) => setIndex(value as number)}
+        onChange={(_event, value) => setIndex(value as number)}
       >
       <TabList>
         <Tab>Vibes  { filterEmoji == "" ? (
@@ -425,7 +505,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               <td>{selected?.id == playlist.id ? '✅' : ''}</td>
               <td>{playlist.name}</td>
               <td>{playlist?.tracks?.total}</td>
-              <td><a href={playlist.external_urls.spotify} target="_blank"><img src="/spotify_icon.png" style={{height: "20px"}} /></a></td>
+              <td><a href={playlist?.external_urls?.spotify} target="_blank"><img src="/spotify_icon.png" style={{height: "20px"}} /></a></td>
             </tr>
           ))}
           </tbody>
@@ -447,7 +527,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         <table>
           <thead>
             <tr>
-              <th></th>
+              <th>✅</th>
               <th>Name</th>
               <th>Artist</th>
               <th>Key</th>
@@ -458,9 +538,9 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             <tr key={`${track.track.id}-${track.track.features?.key}-${track.track.features?.mode}`} onClick={() => {setSelectedTrack(track); setIndex(3)}}>
               <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
               <td>{track.track.name}</td>
-              <td>{'album' in track.track ? track.track.album.artists[0].name : 'N/A'}</td>
+              <td>{isTrack(track?.track) ? track?.track?.album?.artists[0]?.name : 'N/A'}</td>
               <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
-              <td><a href={track.track.external_urls.spotify} target="_blank">Open in Spotify</a></td>
+              <td style={{cursor: "pointer"}}><a href={track?.track?.external_urls?.spotify} target="_blank"><img src="/spotify_icon.png" style={{height: "20px"}} /></a></td>
             </tr>
           ))}
           </tbody>
@@ -473,7 +553,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         onClick={async ()=> { 
         const user = await doWithRateLimiter(() => sdk.currentUser.profile(), [])
         setLoading("Saving playlist");
-        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive[0].track.name} - ${filterEmoji}`);
+        await makePlaylist(user.id || "", startingFive, `C5 #${playlists.filter((p)=>p.name.includes("C5")).length + 1} - ${startingFive?.[0]?.track?.name} - ${filterEmoji}`);
         setLoading("");
         setStartingFive([])
         setRequeryPlaylists((cur) => cur + 1)
@@ -481,18 +561,19 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       <table>
         <thead>
           <tr>
+            <th>✅</th>
             <th>Name</th>
             <th>Artist</th>
             <th>Key</th>
-            <th>Selected</th>
+            
           </tr>
         </thead>
         <tbody>{startingFive.map((track: PlaylistedTrack<TrackItemWithAudioFeatures>) => (
           <tr key={`${track.track.id}-${track.track.features?.key}-${track.track.features?.mode}`} onClick={() => setSelectedTrack(track)}>
-            <td>{track.track.name}</td>
-            <td>{'album' in track.track ? track.track.album.artists[0].name : 'N/A'}</td>
-            <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
             <td>{selectedTrack?.track.id == track.track.id ? '✅' : ''}</td>
+            <td>{track.track.name}</td>
+            <td>{isTrack(track?.track) ? track?.track?.album?.artists[0]?.name : 'N/A'}</td>
+            <td>{'features' in track.track ? keyString(track.track.features?.key || 0, track.track.features?.mode || 0) : 'N/A'}</td>
           </tr>
         ))}
         </tbody>

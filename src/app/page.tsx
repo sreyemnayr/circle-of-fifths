@@ -278,7 +278,7 @@ export default function Home() {
 
       <h1 style={{fontSize: "2.5rem", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center"}}>Circle of Fifths <span style={{paddingLeft: "14px", display: "inline-flex", flexDirection:"column", fontSize: "0.5rem", justifyContent: "center", alignItems: "center"}}><span>Powered by</span><img src="/spotify.png" style={{height: "70px"}} /></span>
       </h1>
-      <div style={{padding: "0 5vw"}}>Given a seed track and optional vibes settings, this app will generate a long (~200 tracks) playlist with <em>no repeated tracks</em> that starts in the key of the seed track and follows the <div style={{display: "inline-block", fontWeight: "bold", textDecoration: "underline", cursor: "pointer"}} onClick={() => setDisplayOptions(true)}>circle of fifths</div>. You can find your seed track by either loading existing playlists or searching. </div>
+      <div style={{padding: "0 5vw", fontSize: "0.7rem"}}>Given a seed track and optional vibes settings, this app will generate a long (~200 tracks) playlist with <em>no repeated tracks</em> that starts in the key of the seed track and follows the <div style={{display: "inline-block", fontWeight: "bold", textDecoration: "underline", cursor: "pointer"}} onClick={() => setDisplayOptions(true)}>circle of fifths</div>. You can find your seed track by either loading existing playlists or searching. </div>
       
     {!session || session.status != "authenticated" ? <>
     <Button color="success" onClick={() => signIn("spotify")}>Authenticate with Spotify</Button>
@@ -501,6 +501,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       <Tabs aria-label="Basic tabs" 
         value={index}
         onChange={(_event, value) => setIndex(value as number)}
+        style={{alignItems: "center"}}
       >
       <TabList>
         <Tab>Vibes  { filterEmoji == "" ? (

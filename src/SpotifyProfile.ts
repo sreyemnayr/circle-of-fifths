@@ -48,6 +48,7 @@ export class MyErrorHandler implements IHandleErrors {
   }
 }
 
+
 const spotifyProfile = SpotifyProvider({
   clientId: credentials.clientId,
   clientSecret: credentials.clientSecret,

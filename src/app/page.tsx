@@ -74,7 +74,7 @@ const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemW
   const results = []
   for (let i = 0; i < tracks.length; i += 100) {
     const chunk = tracks.slice(i, i + 100)
-    results.push(await doWithRateLimiter((playlist_id: string, uris?: string[] | undefined, position?: number | undefined) => sdk.playlists.addItemsToPlaylist(playlist_id, uris, position), [playlist.id, chunk.map((track) => track.track.uri)]))
+    results.push(await doWithRateLimiter((playlist_id: string, uris?: string[] | undefined, position?: number | undefined) => sdk.playlists.addItemsToPlaylist(playlist_id, uris, position), [playlist.id, chunk.map((track) => track.track.uri), i]))
   }
   
   // const results = await Promise.allSettled(promises)
@@ -87,11 +87,32 @@ const makePlaylist = async (user_id: string , tracks: PlaylistedTrack<TrackItemW
 // }
 
 const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[]) => {
+  
   const track_ids = tracks.map((track)=>track.track.id)
-  // Slice track_ids into 100-item chunks
-  const promises = []
+  const cached_tracks = []
+  const cached_promises = []
+  
   for (let i = 0; i < track_ids.length; i += 100) {
     const chunk = track_ids.slice(i, i + 100)
+    cached_promises.push(fetch(`/api/tracks?ids=${chunk.join(",")}`, {method: "GET"}).then((res)=>res.json()))
+  }
+
+  const cached_results = await Promise.allSettled(cached_promises)
+  for (let result of cached_results) {
+    if(result.status == "fulfilled"){
+      cached_tracks.push(...result.value)
+    }
+  }
+
+  const cached_track_ids = cached_tracks.map((track: TrackItemWithAudioFeatures)=>track.id)
+  
+  const uncached_tracks = tracks.filter((track)=>!cached_track_ids.includes(track.track.id))
+  const uncached_track_ids = uncached_tracks.map((track)=>track.track.id)
+  // Slice track_ids into 100-item chunks
+  
+  const promises = []
+  for (let i = 0; i < uncached_track_ids.length; i += 100) {
+    const chunk = uncached_track_ids.slice(i, i + 100)
     promises.push(doWithRateLimiter((params: string[]) => sdk.tracks.audioFeatures(params), [chunk]))
   }
   
@@ -100,14 +121,16 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
   for(let result of results) {
     if(result.status == "fulfilled"){
       for (let trackFeatures of result.value) {
-        const track = tracks.find((track) => track.track.id == trackFeatures.id)
+        const track = uncached_tracks.find((track) => track.track.id == trackFeatures.id)
         if(track) {
           track.track.features = trackFeatures
         }
       }
     } 
   }
-  return tracks
+  await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(tracks)})
+
+  return [...cached_tracks, ...uncached_tracks]
 }
 
 const nextKeys = (track: PlaylistedTrack<TrackItemWithAudioFeatures> | undefined) => {

@@ -105,6 +105,13 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
   }
 
   const cached_track_ids = cached_tracks.map((track: TrackItemWithAudioFeatures)=>track.id)
+
+  for (let cached_track of cached_tracks) {
+    const track = tracks.find((track)=>track.track.id == cached_track.id)
+    if (track) {
+      track.track.features = cached_track.features
+    }
+  }
   
   const uncached_tracks = tracks.filter((track)=>!cached_track_ids.includes(track.track.id))
   const uncached_track_ids = uncached_tracks.map((track)=>track.track.id)
@@ -121,14 +128,18 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
   for(let result of results) {
     if(result.status == "fulfilled"){
       for (let trackFeatures of result.value) {
-        const track = uncached_tracks.find((track) => track.track.id == trackFeatures.id)
+        const uncached_track = uncached_tracks.find((track) => track.track.id == trackFeatures.id)
+        if(uncached_track) {
+          uncached_track.track.features = trackFeatures
+        }
+        const track = tracks.find((track)=>track.track.id == trackFeatures.id)
         if(track) {
           track.track.features = trackFeatures
         }
       }
     } 
   }
-  await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(tracks)})
+  await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(uncached_tracks.map((track)=>track.track))})
 
   return [...cached_tracks, ...uncached_tracks]
 }
@@ -204,7 +215,7 @@ const getNextTracks = async (seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[
     }
   }
   return add_to_playlist
-  
+
   // console.log(next_tracks.map((track)=>track.name))
   // const next_track = next_tracks[Math.floor(Math.random()*next_tracks.length)] as TrackItemWithAudioFeatures
   // const next_playlist_track: PlaylistedTrack<TrackItemWithAudioFeatures> = {

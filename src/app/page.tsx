@@ -143,7 +143,7 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
     await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(uncached_tracks.map((track)=>track.track))})
   }
 
-  return [...cached_tracks, ...uncached_tracks]
+  return tracks
 }
 
 const nextKeys = (track: PlaylistedTrack<TrackItemWithAudioFeatures> | undefined) => {

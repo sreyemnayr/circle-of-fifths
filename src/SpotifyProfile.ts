@@ -65,7 +65,7 @@ const scopes = [
   "user-read-playback-state",
   "user-read-currently-playing",
   "user-library-read",
-  "user-modify-playback-state",
+  // "user-modify-playback-state",
   "playlist-read-private",
   "playlist-read-collaborative",
   "playlist-modify-public",

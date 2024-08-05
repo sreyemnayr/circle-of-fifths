@@ -9,6 +9,9 @@ import CssBaseline from '@mui/joy/CssBaseline';
 import { getInitColorSchemeScript } from '@mui/joy/styles';
 import Button from '@mui/joy/Button';
 
+const baseUrl = "https://www.fifths.xyz"
+
+
 function AuthSessionProvider({
   session,
   children,
@@ -24,7 +27,7 @@ function AuthSessionProvider({
   
     if (!mounted) {
       // to avoid layout shift, render a placeholder button
-      return <SessionProvider session={session}>
+      return <SessionProvider session={session} baseUrl={baseUrl} basePath={`/api/nextauth`}>
       
               {/* {children} */}
               <body>

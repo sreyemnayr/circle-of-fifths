@@ -66,6 +66,7 @@ const authConfig: NextAuthConfig = {
   },
   debug: process.env.NODE_ENV === "development",
   secret: process.env.NEXTAUTH_SECRET,
+  basePath: "/api/nextauth",
 }
  
 export const { auth, handlers, signIn, signOut } = NextAuth(authConfig)

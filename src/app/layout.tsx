@@ -1,4 +1,3 @@
-// import authOptions from "@/app/api/auth/[...nextauth]/authOptions";
 import "@/app/globals.css";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
 import { auth } from "@/auth"

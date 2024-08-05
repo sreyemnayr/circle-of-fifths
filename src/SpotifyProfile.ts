@@ -49,15 +49,13 @@ export class MyErrorHandler implements IHandleErrors {
 }
 
 
-
-
 const spotifyProfile = SpotifyProvider({
   clientId: credentials.clientId,
   clientSecret: credentials.clientSecret,
   
 });
 
-console.log(credentials)
+// console.log(credentials)
 
 const authURL = new URL("https://accounts.spotify.com/authorize");
 

@@ -139,7 +139,9 @@ const getTracksData = async (tracks: PlaylistedTrack<TrackItemWithAudioFeatures>
       }
     } 
   }
-  await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(uncached_tracks.map((track)=>track.track))})
+  if(uncached_tracks.length > 0) {
+    await fetch(`/api/tracks`, {method: "POST", body: JSON.stringify(uncached_tracks.map((track)=>track.track))})
+  }
 
   return [...cached_tracks, ...uncached_tracks]
 }

@@ -123,7 +123,7 @@ type TargetKey = `target_${KnownKey}`
 type MinKey = `min_${KnownKey}`
 type MaxKey = `max_${KnownKey}`
 
-interface OptionSettings {
+export interface OptionSettings {
     label: string,
     range: [number, number],
     step: number,
@@ -163,7 +163,7 @@ type ExampleTracks ={
     [K in KnownKey]: IExampleTrack[]
 }
 
-const option_examples: ExampleTracks = {
+export const option_examples: ExampleTracks = {
     acousticness: [
         {
             value: 0.000152,
@@ -547,7 +547,7 @@ const option_examples: ExampleTracks = {
 
 
 
-const option_settings: OptionSettings[] = [
+export const option_settings: OptionSettings[] = [
     {range: [0.0, 1.0], step: 0.001, label: "Acousticness", description: "A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.", key: "acousticness", value: [0.0, 1.0], target: true, emoji_scale: ["🎛️🎛️", "🎛️🎸", "🎸🎸", "🎸🎻", "🎻🎻"]},
     {range: [0.0, 1.0], step: 0.001, label: "Danceability", description: "Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.", key: "danceability", value: [0.0, 1.0], target: true, emoji_scale: ["🧘‍♂️🧘‍♂️", "🧘‍♂️🚶‍♂️", "🚶‍♂️🚶‍♂️", "🚶‍♂️💃", "💃💃"]},
     {range: [0.0, 1.0], step: 0.001, label: "Energy", description: "Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy.", key: "energy", value: [0.0, 1.0], target: true, emoji_scale: ["❄️❄️", "❄️❄️", "❄️🌿", "🌿🌿", "🌿🔥", "🔥🔥", "🔥🔥"]},

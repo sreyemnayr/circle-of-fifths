@@ -14,6 +14,7 @@ import sdk from "@/lib/spotify-sdk/ClientInstance";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { OptionsSliders, IExampleTrack } from "@/components/OptionsSliders";
+import OptionsMultidimensional from "@/components/OptionsMultidimensional";
 import { keyString, upOneFifth, relativeKey } from "@/util/keys"
 
 import { RateLimit } from 'async-sema';
@@ -279,17 +280,17 @@ export default function Home() {
       <h1 style={{fontSize: "2.5rem", display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "center"}}>Circle of Fifths <span style={{paddingLeft: "14px", display: "inline-flex", flexDirection:"column", fontSize: "0.5rem", justifyContent: "center", alignItems: "center"}}><span>Powered by</span><img src="/spotify.png" style={{height: "70px"}} /></span>
       </h1>
       <div style={{padding: "0 5vw", fontSize: "0.7rem"}}>Given a seed track and optional vibes settings, this app will generate a long (~200 tracks) playlist with <em>no repeated tracks</em> that starts in the key of the seed track and follows the <div style={{display: "inline-block", fontWeight: "bold", textDecoration: "underline", cursor: "pointer"}} onClick={() => setDisplayOptions(true)}>circle of fifths</div>. You can find your seed track by either loading existing playlists or searching. </div>
-      
-    {!session || session.status != "authenticated" ? <>
+      <div style={{display: "flex", justifyContent: "center", flexDirection: "column", alignItems: "center", width: "100%"}}>
+    {!session || session.status != "authenticated" ? 
     <Button color="success" onClick={() => signIn("spotify")}>Authenticate with Spotify</Button>
-    </> : <>
+     : <>
     <SpotifySearch sdk={sdk} />
-      <p> <Button color="danger" onClick={() => signOut()}>Logged into Spotify as {session.data.user?.name}. Click to sign out.</Button></p>
+      <p> Logged into Spotify as {session.data.user?.name}. <Button color="danger" onClick={() => signOut()}> Sign Out.</Button></p>
       
     </>}
     <div style={{padding: "0 5vw"}}>Made with ❤️ by <a href="https://twitter.com/sreyemnayr">Ryan Meyers</a></div>
     <div style={{fontSize: "0.7rem", padding: "0 5vw"}}>Special thanks to Tim Williamson of The Nieux Society for inspiring this app with his deep and unrelenting love of Yacht Rock.</div>
-    
+    </div>
     </>
   )
 
@@ -518,11 +519,12 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         <Tab>Track Seed</Tab>
         <Tab>Generate Playlist</Tab>
       </TabList>
-      <TabPanel value={0}>
-        <div >
+      <TabPanel value={0} style={{width: "100%", height: "100%"}}>
+        <div style={{width: "100%", height: "100%"}}>
           {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
-          <OptionsSliders ignore={["key", "mode"]} setFilters={setFilters} setFilterEmoji={setFilterEmoji}
-          popular_tracks={popularTracks} />
+          {/* <OptionsSliders ignore={["key", "mode"]} setFilters={setFilters} setFilterEmoji={setFilterEmoji}
+          popular_tracks={popularTracks} /> */}
+          <OptionsMultidimensional ignore={["key", "mode", "time_signature", "tempo", "duration_ms", "loudness"]} setFilters={setFilters} />
         </div>
       </TabPanel>
 

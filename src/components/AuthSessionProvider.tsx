@@ -52,7 +52,7 @@ function AuthSessionProvider({
               // All options that you pass to CssVarsProvider you should also pass here.
               defaultMode: "dark",
             })}
-            <SessionProvider session={session}>
+            <SessionProvider session={session} baseUrl={baseUrl} basePath={`/api/nextauth`}>
               {children}
             </SessionProvider>
             

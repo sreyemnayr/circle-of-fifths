@@ -19,7 +19,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <AuthSessionProvider session={session}>
-      <body className={inter.className} style={{overflow: "scroll"}}>
+      <body className={inter.className} style={{overflow: "auto"}}>
       <Sheet color="neutral" >{children}</Sheet>
       {/* The rest of your application */}
 

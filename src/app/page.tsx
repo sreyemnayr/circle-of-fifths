@@ -21,9 +21,9 @@ import {
 import sdk from "@/lib/spotify-sdk/ClientInstance";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
-// import { OptionsSliders, IExampleTrack } from "@/components/OptionsSliders";
-import { IExampleTrack } from "@/components/OptionsSliders";
-import OptionsMultidimensional from "@/components/OptionsMultidimensional";
+import { OptionsSliders, IExampleTrack } from "@/components/OptionsSliders";
+// import { IExampleTrack } from "@/components/OptionsSliders";
+// import OptionsMultidimensional from "@/components/OptionsMultidimensional";
 import { keyString, upOneFifth, relativeKey } from "@/util/keys";
 
 import { RateLimit } from "async-sema";
@@ -218,6 +218,25 @@ const getPopularExamples = async () => {
       );
       return {
         value: results.tracks[0].popularity,
+        name: results.tracks[0].name,
+        artist: results.tracks[0].album.artists[0].name,
+        img: results.tracks[0].album.images[0].url,
+      } as IExampleTrack;
+    })
+  );
+  return all_results;
+};
+
+const getLoudnessExamples = async () => {
+  console.log("Getting loudness examples");
+  const all_results = Promise.all(
+    [-60, -50, -40, -30, -20, -10, 0].map(async (loudness) => {
+      const results = await doWithRateLimiter(
+        (params: RecommendationsRequest) => sdk.recommendations.get(params),
+        [{ limit: 10, seed_genres: ["pop"], target_loudness: loudness }]
+      );
+      return {
+        value: results.tracks[0].loudness,
         name: results.tracks[0].name,
         artist: results.tracks[0].album.artists[0].name,
         img: results.tracks[0].album.images[0].url,
@@ -503,8 +522,8 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [burned, setBurned] = useState<boolean>(false);
 
   const [popularTracks, setPopularTracks] = useState<IExampleTrack[]>([]);
-
-  const [filterEmoji] = useState<string>("");
+  const [loudnessTracks, setLoudnessTracks] = useState<IExampleTrack[]>([]);
+  const [filterEmoji, setFilterEmoji] = useState<string>("");
 
   const [requeryPlaylists, setRequeryPlaylists] = useState<number>(1);
 
@@ -676,6 +695,22 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
     }
   }, [sdk, popularTracks, loading]);
 
+  useEffect(() => {
+    if (sdk && !loudnessTracks.length && !loading) {
+      setLoading("Getting loudness tracks");
+      console.log("Getting loudness tracks");
+      (async () => {
+        try {
+          const results = await getLoudnessExamples();
+          setLoudnessTracks(results);
+          setLoading("");
+        } catch (e: any) {
+          _setWarning(e.message);
+        }
+      })();
+    }
+  }, [sdk, loudnessTracks, loading]);
+
   const [index, setIndex] = useState(1);
 
   return (
@@ -743,9 +778,14 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
           <div style={{ width: "100%", height: "100%" }}>
             {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
-            {/* <OptionsSliders ignore={["key", "mode"]} setFilters={setFilters} setFilterEmoji={setFilterEmoji}
-          popular_tracks={popularTracks} /> */}
-            <OptionsMultidimensional
+            <OptionsSliders
+              ignore={["key", "mode"]}
+              setFilters={setFilters}
+              setFilterEmoji={setFilterEmoji}
+              popular_tracks={popularTracks}
+              loudness_tracks={loudnessTracks}
+            />
+            {/* <OptionsMultidimensional
               ignore={[
                 "key",
                 "mode",
@@ -755,7 +795,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 "loudness",
               ]}
               setFilters={setFilters}
-            />
+            /> */}
           </div>
         </TabPanel>
 

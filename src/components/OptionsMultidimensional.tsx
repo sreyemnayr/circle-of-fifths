@@ -132,33 +132,33 @@ const OptionsMultidimensional: React.FC<{
     );
   };
 
-  const interpolatePoint = (start: Point, end: Point, t: number): Point => ({
-    x: start.x + (end.x - start.x) * t,
-    y: start.y + (end.y - start.y) * t,
-  });
+  // const interpolatePoint = (start: Point, end: Point, t: number): Point => ({
+  //   x: start.x + (end.x - start.x) * t,
+  //   y: start.y + (end.y - start.y) * t,
+  // });
 
-  const handleLineClick = (
-    event: React.MouseEvent<SVGLineElement>,
-    dim: DimensionLine
-  ) => {
-    const svgRect = svgRef.current?.getBoundingClientRect();
-    if (!svgRect) return;
+  // const handleLineClick = (
+  //   event: React.MouseEvent<SVGLineElement>,
+  //   dim: DimensionLine
+  // ) => {
+  //   const svgRect = svgRef.current?.getBoundingClientRect();
+  //   if (!svgRect) return;
 
-    const clickX = event.clientX - svgRect.left;
-    const clickY = event.clientY - svgRect.top;
+  //   const clickX = event.clientX - svgRect.left;
+  //   const clickY = event.clientY - svgRect.top;
 
-    const dx = dim.end.x - dim.start.x;
-    const dy = dim.end.y - dim.start.y;
-    const t =
-      ((clickX - dim.start.x) * dx + (clickY - dim.start.y) * dy) /
-      (dx * dx + dy * dy);
+  //   const dx = dim.end.x - dim.start.x;
+  //   const dy = dim.end.y - dim.start.y;
+  //   const t =
+  //     ((clickX - dim.start.x) * dx + (clickY - dim.start.y) * dy) /
+  //     (dx * dx + dy * dy);
 
-    if (t >= 0 && t <= 1) {
-      const value =
-        t * (dim.option.range[1] - dim.option.range[0]) + dim.option.range[0];
-      handleDrag(dim.option.key, value);
-    }
-  };
+  //   if (t >= 0 && t <= 1) {
+  //     const value =
+  //       t * (dim.option.range[1] - dim.option.range[0]) + dim.option.range[0];
+  //     handleDrag(dim.option.key, value);
+  //   }
+  // };
 
   const getEmoji = (option: OptionSettings, value: number) => {
     if (option.emoji_scale) {
@@ -250,6 +250,7 @@ const OptionsMultidimensional: React.FC<{
       const midY1 = (p1.y + p2.y) / 2;
       const midX2 = (p2.x + p3.x) / 2;
       const midY2 = (p2.y + p3.y) / 2;
+      console.log(midX1, midY1, midX2, midY2);
       return `Q ${p2.x},${p2.y} ${midX2},${midY2}`;
     };
 
@@ -279,6 +280,7 @@ const OptionsMultidimensional: React.FC<{
     option: OptionSettings,
     index?: number
   ) => {
+    console.log(option);
     event.preventDefault();
     const svgRect = svgRef.current?.getBoundingClientRect();
     if (!svgRect) return;

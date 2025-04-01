@@ -78,7 +78,7 @@ export const RangeSlider = ({
         valueLabelFormat={display}
         // disabled={!enabled}
         step={option.step}
-        min={option.range[0]}
+        min={option.key == "loudness" ? -21 : option.range[0]}
         max={option.range[1]}
         marks={marks}
         track={option.target ? false : "normal"}
@@ -753,11 +753,91 @@ export const option_settings: OptionSettings[] = [
   },
 ];
 
+interface RecommendationsRequestPreset {
+  name: string;
+  emoji: string;
+  description: string;
+  filters: RecommendationsRequest;
+}
+const weatherPresets: RecommendationsRequestPreset[] = [
+  {
+    name: "Sunny Vibes",
+    emoji: "☀️",
+    description:
+      "Bright, happy, and high-energy tunes for clear skies and good moods.",
+    filters: {
+      min_energy: 0.7,
+      min_valence: 0.7,
+      min_danceability: 0.6,
+      min_popularity: 50,
+    },
+  },
+  {
+    name: "Rainy Day Reflection",
+    emoji: "🌧️",
+    description: "Laid-back, emotional songs for gray skies and introspection.",
+    filters: {
+      max_valence: 0.4,
+      max_energy: 0.5,
+      max_danceability: 0.5,
+    },
+  },
+  {
+    name: "Thunderstorm Drama",
+    emoji: "⛈️",
+    description: "Moody, cinematic tracks with a hint of power and mystery.",
+    filters: {
+      min_energy: 0.5,
+      max_valence: 0.3,
+    },
+  },
+  {
+    name: "Foggy Ambience",
+    emoji: "🌫️",
+    description: "Hazy, soft, and mysterious sounds for a fog-filled morning.",
+    filters: {
+      max_energy: 0.4,
+      max_valence: 0.5,
+      max_popularity: 50,
+    },
+  },
+  {
+    name: "Light Snow Chill",
+    emoji: "❄️",
+    description: "Cozy, peaceful songs for a quiet snowy day.",
+    filters: {
+      max_energy: 0.6,
+      max_liveness: 0.3,
+    },
+  },
+  {
+    name: "Blizzard Isolation",
+    emoji: "🌨️",
+    description:
+      "Sparse, melancholic, and ambient tracks for when the world is frozen over.",
+    filters: {
+      max_valence: 0.3,
+      max_danceability: 0.3,
+      max_energy: 0.4,
+    },
+  },
+  {
+    name: "Windy Whirl",
+    emoji: "🌪️",
+    description: "Raw and restless tracks to match gusty, chaotic weather.",
+    filters: {
+      min_energy: 0.6,
+      max_valence: 0.5,
+    },
+  },
+];
+
 export const OptionsSliders = ({
   ignore = [],
   setFilters,
   popular_tracks,
   loudness_tracks,
+  tempo_tracks,
   setFilterEmoji,
 }: {
   ignore?: KnownKey[];
@@ -765,12 +845,14 @@ export const OptionsSliders = ({
   setFilterEmoji: Dispatch<SetStateAction<string>>;
   popular_tracks: IExampleTrack[];
   loudness_tracks: IExampleTrack[];
+  tempo_tracks: IExampleTrack[];
 }) => {
   // const [filters, setFilters] = useState<RecommendationsRequest>({limit: 100} as RecommendationsRequest)
   const [options, setOptions] = useState<OptionSettings[]>(option_settings);
   const [activeOption, setActiveOption] = useState<OptionSettings | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
-
+  const [activePreset, setActivePreset] =
+    useState<RecommendationsRequestPreset | null>(null);
   useEffect(() => {
     if (!activeOption) {
       setActiveOption(options[0] || null);
@@ -812,10 +894,14 @@ export const OptionsSliders = ({
         }
       }
 
-      setFilterEmoji(emoji_list.join(" + "));
+      if (activePreset) {
+        setFilterEmoji(activePreset.emoji);
+      } else {
+        setFilterEmoji(emoji_list.join(" + "));
+      }
       return { ...cur };
     });
-  }, [options]);
+  }, [JSON.stringify(options)]);
 
   useEffect(() => {
     let marks: Mark[] = [];
@@ -850,7 +936,12 @@ export const OptionsSliders = ({
       }
     }
     setMarks(marks);
-  }, [activeOption, option_examples.popularity]);
+  }, [
+    activeOption,
+    option_examples.popularity,
+    option_examples.loudness,
+    option_examples.tempo,
+  ]);
 
   useEffect(() => {
     console.log("popular_tracks", popular_tracks);
@@ -866,8 +957,84 @@ export const OptionsSliders = ({
     }
   }, [loudness_tracks]);
 
+  useEffect(() => {
+    console.log("tempo_tracks", tempo_tracks);
+    if (tempo_tracks.length > 0) {
+      option_examples["tempo"] = tempo_tracks;
+    }
+  }, [tempo_tracks]);
+
   return (
     <div>
+      <div>Choose a preset</div>
+      <FormControl>
+        <Select
+          value={activePreset}
+          onChange={(_e, v) => {
+            console.log("v", v);
+            setActivePreset(v as RecommendationsRequestPreset);
+            setOptions((cur) => {
+              const preset = v?.filters as RecommendationsRequest;
+
+              for (const option of cur) {
+                const target_key = `target_${option.key}` as TargetKey;
+                const min_key = `min_${option.key}` as MinKey;
+                const max_key = `max_${option.key}` as MaxKey;
+
+                if (
+                  preset?.[target_key] ||
+                  preset?.[min_key] ||
+                  preset?.[max_key]
+                ) {
+                  if (preset?.[target_key]) {
+                    option.target = true;
+                    option.value = [preset[target_key], preset[target_key]];
+                  } else {
+                    option.target = false;
+                  }
+
+                  if (preset?.[min_key] && preset?.[max_key]) {
+                    console.log(
+                      option.key,
+                      "BOTH",
+                      preset[min_key],
+                      preset[max_key]
+                    );
+                    option.value = [preset[min_key], preset[max_key]];
+                  } else if (preset?.[min_key]) {
+                    console.log(
+                      option.key,
+                      "MIN",
+                      preset[min_key],
+                      option.range[1]
+                    );
+                    option.value = [preset[min_key], option.range[1]];
+                  } else if (preset?.[max_key]) {
+                    console.log(
+                      option.key,
+                      "MAX",
+                      option.range[0],
+                      preset[max_key]
+                    );
+                    option.value = [option.range[0], preset[max_key]];
+                  }
+                } else {
+                  option.target = true;
+                  option.value = [option.range[0], option.range[1]];
+                }
+              }
+              return cur;
+            });
+          }}
+        >
+          {weatherPresets.map((preset) => (
+            <Option key={preset.name} value={preset}>
+              {preset.emoji} {preset.name} <em>{preset.description}</em>
+            </Option>
+          ))}
+        </Select>
+      </FormControl>
+
       {activeOption && (
         <FormControl
           orientation="horizontal"

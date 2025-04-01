@@ -119,7 +119,9 @@ const makePlaylist = async (
 const getTracksData = async (
   tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[]
 ) => {
-  const track_ids = tracks.map((track) => track.track.id);
+  const track_ids = tracks
+    .filter((track) => track?.track?.id)
+    .map((track) => track.track.id);
   const cached_tracks = [];
   const cached_promises = [];
 
@@ -153,7 +155,9 @@ const getTracksData = async (
   const uncached_tracks = tracks.filter(
     (track) => !cached_track_ids.includes(track.track.id)
   );
-  const uncached_track_ids = uncached_tracks.map((track) => track.track.id);
+  const uncached_track_ids = uncached_tracks
+    .filter((track) => track?.track?.id)
+    .map((track) => track.track.id);
   // Slice track_ids into 100-item chunks
 
   const promises = [];
@@ -229,21 +233,118 @@ const getPopularExamples = async () => {
 
 const getLoudnessExamples = async () => {
   console.log("Getting loudness examples");
-  const all_results = Promise.all(
-    [-60, -50, -40, -30, -20, -10, 0].map(async (loudness) => {
+  const all_result_tracks_promises = Promise.all(
+    [-22, -18, -14, -10, -6, -2, -1].map(async (loudness, idx, arr) => {
       const results = await doWithRateLimiter(
         (params: RecommendationsRequest) => sdk.recommendations.get(params),
-        [{ limit: 10, seed_genres: ["pop"], target_loudness: loudness }]
+        [
+          {
+            limit: 1,
+            seed_genres: ["pop"],
+            min_loudness: loudness,
+            max_loudness: arr?.[idx + 1] || 0,
+            target_popularity: 80,
+          },
+        ]
       );
-      return {
-        value: results.tracks[0].loudness,
-        name: results.tracks[0].name,
-        artist: results.tracks[0].album.artists[0].name,
-        img: results.tracks[0].album.images[0].url,
-      } as IExampleTrack;
+      return results.tracks;
     })
   );
-  return all_results;
+
+  const all_results = (await all_result_tracks_promises).flat();
+
+  const all_results_unique = all_results
+    .filter(
+      (track, index, self) => index === self.findIndex((t) => t.id === track.id)
+    )
+    .map((t) => ({
+      track: t,
+      added_at: "", // Placeholder or actual value
+      added_by: {
+        id: "", // Placeholder or actual value
+        external_urls: { spotify: "" }, // Placeholder or actual value
+        href: "", // Placeholder or actual value
+        type: "", // Placeholder or actual value
+        uri: "", // Placeholder or actual value
+      },
+      is_local: false, // Default or actual value
+      primary_color: "", // Default or actual value
+    }));
+
+  const all_results_data = await getTracksData(all_results_unique);
+
+  return all_results_data
+    .filter((track) => "album" in track.track)
+    .map((track) => {
+      return {
+        value: track.track.features?.loudness,
+        name: track.track.name,
+        artist:
+          "album" in track.track
+            ? track?.track?.album?.artists[0]?.name
+            : "N/A",
+        img:
+          "album" in track.track ? track?.track?.album?.images[0]?.url : "N/A",
+      } as IExampleTrack;
+    });
+};
+
+const getTempoExamples = async () => {
+  console.log("Getting tempo examples");
+  const all_result_tracks_promises = Promise.all(
+    [50, 100, 140, 180].map(async (tempo, idx, arr) => {
+      const results = await doWithRateLimiter(
+        (params: RecommendationsRequest) => sdk.recommendations.get(params),
+        [
+          {
+            limit: 1,
+            seed_genres: ["pop"],
+            min_tempo: tempo,
+            max_tempo: arr?.[idx + 1] || 220,
+            target_popularity: 80,
+          },
+        ]
+      );
+      return results.tracks;
+    })
+  );
+
+  const all_results = (await all_result_tracks_promises).flat();
+
+  const all_results_unique = all_results
+    .filter(
+      (track, index, self) => index === self.findIndex((t) => t.id === track.id)
+    )
+    .map((t) => ({
+      track: t,
+      added_at: "", // Placeholder or actual value
+      added_by: {
+        id: "", // Placeholder or actual value
+        external_urls: { spotify: "" }, // Placeholder or actual value
+        href: "", // Placeholder or actual value
+        type: "", // Placeholder or actual value
+        uri: "", // Placeholder or actual value
+      },
+      is_local: false, // Default or actual value
+      primary_color: "", // Default or actual value
+    }));
+
+  const all_results_data = await getTracksData(all_results_unique);
+
+  return all_results_data
+    .filter((track) => "album" in track.track)
+    .map((track) => {
+      return {
+        value: track.track.features?.tempo,
+        name: track.track.name,
+        artist:
+          "album" in track.track
+            ? track?.track?.album?.artists[0]?.name
+            : "N/A",
+        img:
+          "album" in track.track ? track?.track?.album?.images[0]?.url : "N/A",
+      } as IExampleTrack;
+    });
 };
 
 const getNextTracks = async (
@@ -523,6 +624,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   const [popularTracks, setPopularTracks] = useState<IExampleTrack[]>([]);
   const [loudnessTracks, setLoudnessTracks] = useState<IExampleTrack[]>([]);
+  const [tempoTracks, setTempoTracks] = useState<IExampleTrack[]>([]);
   const [filterEmoji, setFilterEmoji] = useState<string>("");
 
   const [requeryPlaylists, setRequeryPlaylists] = useState<number>(1);
@@ -611,6 +713,27 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [selectedTrack]);
 
   useEffect(() => {
+    if (Object.keys(filters).length > 1) {
+      (async () => {
+        try {
+          const new_filters = {
+            ...filters,
+            seed_genres: ["pop", "rock"],
+          };
+          const results = await doWithRateLimiter(
+            (params: RecommendationsRequest) => sdk.recommendations.get(params),
+            [new_filters]
+          );
+          console.log("Filters", new_filters);
+          console.log("Filtered Tracks", results);
+        } catch (e: any) {
+          _setWarning(e.message);
+        }
+      })();
+    }
+  }, [sdk, JSON.stringify(filters)]);
+
+  useEffect(() => {
     (async () => {
       try {
         if (startingFive.length > 0 && startingFive.length < 200) {
@@ -696,7 +819,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [sdk, popularTracks, loading]);
 
   useEffect(() => {
-    if (sdk && !loudnessTracks.length && !loading) {
+    if (sdk && popularTracks.length > 0 && !loudnessTracks.length && !loading) {
       setLoading("Getting loudness tracks");
       console.log("Getting loudness tracks");
       (async () => {
@@ -709,7 +832,29 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         }
       })();
     }
-  }, [sdk, loudnessTracks, loading]);
+  }, [sdk, popularTracks, loudnessTracks, loading]);
+
+  useEffect(() => {
+    if (
+      sdk &&
+      popularTracks.length > 0 &&
+      loudnessTracks.length > 0 &&
+      !tempoTracks.length &&
+      !loading
+    ) {
+      setLoading("Getting tempo tracks");
+      console.log("Getting tempo tracks");
+      (async () => {
+        try {
+          const results = await getTempoExamples();
+          setTempoTracks(results);
+          setLoading("");
+        } catch (e: any) {
+          _setWarning(e.message);
+        }
+      })();
+    }
+  }, [sdk, popularTracks, loudnessTracks, tempoTracks, loading]);
 
   const [index, setIndex] = useState(1);
 
@@ -784,6 +929,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               setFilterEmoji={setFilterEmoji}
               popular_tracks={popularTracks}
               loudness_tracks={loudnessTracks}
+              tempo_tracks={tempoTracks}
             />
             {/* <OptionsMultidimensional
               ignore={[
@@ -946,7 +1092,11 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   playlists.filter((p) => p.name.includes("C5")).length + 1
                 } - ${startingFive?.[0]?.track?.name} - ${filterEmoji}`
               );
-              setLoading("");
+              setLoading(
+                `Saved C5 #${
+                  playlists.filter((p) => p.name.includes("C5")).length + 1
+                } - ${startingFive?.[0]?.track?.name} - ${filterEmoji}`
+              );
               setStartingFive([]);
               setRequeryPlaylists((cur) => cur + 1);
             }}

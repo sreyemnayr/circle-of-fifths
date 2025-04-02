@@ -215,7 +215,7 @@ const nextKeys = (
 const getPopularExamples = async () => {
   console.log("Getting popular examples");
   const all_results = Promise.all(
-    [0, 20, 40, 50, 60, 70, 80, 90].map(async (popularity) => {
+    [0, 20, 30, 40, 50, 70, 90].map(async (popularity) => {
       const results = await doWithRateLimiter(
         (params: RecommendationsRequest) => sdk.recommendations.get(params),
         [{ limit: 10, seed_genres: ["pop"], target_popularity: popularity }]
@@ -234,7 +234,7 @@ const getPopularExamples = async () => {
 const getLoudnessExamples = async () => {
   console.log("Getting loudness examples");
   const all_result_tracks_promises = Promise.all(
-    [-22, -18, -14, -10, -6, -2, -1].map(async (loudness, idx, arr) => {
+    [-22, -10.013, -7.004, -5.003].map(async (loudness, idx, arr) => {
       const results = await doWithRateLimiter(
         (params: RecommendationsRequest) => sdk.recommendations.get(params),
         [
@@ -292,7 +292,7 @@ const getLoudnessExamples = async () => {
 const getTempoExamples = async () => {
   console.log("Getting tempo examples");
   const all_result_tracks_promises = Promise.all(
-    [50, 100, 140, 180].map(async (tempo, idx, arr) => {
+    [50, 99.21875, 122.017, 140.071].map(async (tempo, idx, arr) => {
       const results = await doWithRateLimiter(
         (params: RecommendationsRequest) => sdk.recommendations.get(params),
         [
@@ -608,6 +608,9 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [tracks, setTracks] = useState<
     PlaylistedTrack<TrackItemWithAudioFeatures>[]
   >([]);
+  const [filterTracks, setFilterTracks] = useState<
+    PlaylistedTrack<TrackItemWithAudioFeatures>[]
+  >([]);
   const [selectedTrack, setSelectedTrack] =
     useState<PlaylistedTrack<TrackItemWithAudioFeatures> | null>(null);
   const [loading, setLoading] = useState<string>("");
@@ -714,16 +717,26 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
 
   useEffect(() => {
     if (Object.keys(filters).length > 1) {
+      console.log("filters", filters);
       (async () => {
         try {
           const new_filters = {
             ...filters,
-            seed_genres: ["pop", "rock"],
+            limit: 25,
+            seed_genres: ["pop", "rock", "country", "acoustic", "r-n-b"],
           };
-          const results = await doWithRateLimiter(
+          const results: RecommendationsResponse = await doWithRateLimiter(
             (params: RecommendationsRequest) => sdk.recommendations.get(params),
             [new_filters]
           );
+          const playlistTracks = results.tracks.map((track) => {
+            return {
+              track: track,
+            } as PlaylistedTrack<TrackItemWithAudioFeatures>;
+          });
+          const tracks_with_data = await getTracksData(playlistTracks);
+          console.log("tracks_with_data", tracks_with_data);
+          setFilterTracks(tracks_with_data);
           console.log("Filters", new_filters);
           console.log("Filtered Tracks", results);
         } catch (e: any) {
@@ -916,8 +929,8 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )}{" "}
           </Tab>
 
-          <Tab>Playlist Seed</Tab>
-          <Tab>Track Seed</Tab>
+          <Tab>My Playlists</Tab>
+          <Tab>Seed Selection</Tab>
           <Tab>Generate Playlist</Tab>
         </TabList>
         <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
@@ -945,8 +958,10 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           </div>
         </TabPanel>
 
-        <TabPanel value={1}>
-          <div style={{ color: "#fff" }}>{loading}</div>
+        <TabPanel value={1} style={{ width: "100%", height: "100%" }}>
+          <div style={{ color: "#fff", width: "100%", height: "100%" }}>
+            {loading}
+          </div>
 
           <table>
             <thead>
@@ -979,9 +994,15 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             </tbody>
           </table>
         </TabPanel>
-        <TabPanel value={2}>
+        <TabPanel value={2} style={{ width: "100%", height: "100%" }}>
+          <div style={{ width: "100%", height: "100%" }}>
+            The track you choose here will function as the &quot;seed&quot; for
+            the playlist that gets generated. Essentially, the first trip around
+            the circle of fifths will start with this track as inspiration along
+            with any vibes you've selected.
+          </div>
           {selected?.id ? (
-            <div>
+            <div style={{ width: "100%", height: "100%" }}>
               <h2>
                 {selected.name}{" "}
                 <span
@@ -1017,7 +1038,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               </tr>
             </thead>
             <tbody>
-              {tracks
+              {(tracks && tracks.length > 0 ? tracks : filterTracks || [])
                 .sort(
                   (a, b) =>
                     (a.track.features?.mode == 1
@@ -1068,7 +1089,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             </tbody>
           </table>
         </TabPanel>
-        <TabPanel value={3}>
+        <TabPanel value={3} style={{ width: "100%", height: "100%" }}>
           <h2>
             {startingFive.length} Tracks |{" "}
             {msToTime(
@@ -1078,7 +1099,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )}
           </h2>
           <Button
-            loading={loading != ""}
+            loading={loading == "Saving playlist"}
             onClick={async () => {
               const user = await doWithRateLimiter(
                 () => sdk.currentUser.profile(),
@@ -1092,12 +1113,13 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   playlists.filter((p) => p.name.includes("C5")).length + 1
                 } - ${startingFive?.[0]?.track?.name} - ${filterEmoji}`
               );
+              setStartingFive([]);
+
               setLoading(
                 `Saved C5 #${
                   playlists.filter((p) => p.name.includes("C5")).length + 1
                 } - ${startingFive?.[0]?.track?.name} - ${filterEmoji}`
               );
-              setStartingFive([]);
               setRequeryPlaylists((cur) => cur + 1);
             }}
           >

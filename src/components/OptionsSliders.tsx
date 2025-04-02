@@ -7,7 +7,15 @@ import FormControl from "@mui/joy/FormControl";
 import FormHelperText from "@mui/joy/FormHelperText";
 import { Mark } from "@mui/base/useSlider";
 
-import { useState, useEffect, Dispatch, SetStateAction, Fragment } from "react";
+import {
+  useState,
+  useEffect,
+  Dispatch,
+  SetStateAction,
+  Fragment,
+  useCallback,
+  useMemo,
+} from "react";
 import { RecommendationsRequest } from "@spotify/web-api-ts-sdk";
 import { keyString } from "@/util/keys";
 import Select from "@mui/joy/Select";
@@ -29,58 +37,156 @@ export const RangeSlider = ({
   onChange: (value: number[]) => void;
   marks?: Mark[];
 }) => {
-  // const [value, setValue] = React.useState<number[]>([20, 37]);
-  // const [value, setValue] = React.useState<number[]>([20, 37]);
-  // const [enabled, setEnabled] = React.useState<boolean>(true)
-
   const [displayValue, setDisplayValue] = useState<[number, number]>(value);
+
+  // Map a value from the actual range to the normalized [0,1] range considering quartiles
+  const mapToNormalizedRange = useCallback(
+    (val: number): number => {
+      const min = option.range[0] ?? 0;
+      const max = option.range[1] ?? 1;
+      const [q1, q2, q3] = option.quartiles || [
+        min + (max - min) * 0.25,
+        min + (max - min) * 0.5,
+        min + (max - min) * 0.75,
+      ];
+
+      // Handle edge cases
+      if (val <= min) return 0;
+      if (val >= max) return 1;
+
+      // Determine which segment the value falls into
+      if (val <= q1) {
+        return ((val - min) / (q1 - min)) * 0.25;
+      } else if (val <= q2) {
+        return 0.25 + ((val - q1) / (q2 - q1)) * 0.25;
+      } else if (val <= q3) {
+        return 0.5 + ((val - q2) / (q3 - q2)) * 0.25;
+      } else {
+        return 0.75 + ((val - q3) / (max - q3)) * 0.25;
+      }
+    },
+    [option.range, option.quartiles]
+  );
+
+  // Map a value from the normalized [0,1] range back to the actual range considering quartiles
+  const mapFromNormalizedRange = useCallback(
+    (normalized: number): number => {
+      const min = option.range[0] ?? 0;
+      const max = option.range[1] ?? 1;
+      const [q1, q2, q3] = option.quartiles || [
+        min + (max - min) * 0.25,
+        min + (max - min) * 0.5,
+        min + (max - min) * 0.75,
+      ];
+
+      // Handle edge cases
+      if (normalized <= 0) return min;
+      if (normalized >= 1) return max;
+
+      // Determine which segment the normalized value falls into
+      if (normalized <= 0.25) {
+        return min + (normalized / 0.25) * (q1 - min);
+      } else if (normalized <= 0.5) {
+        return q1 + ((normalized - 0.25) / 0.25) * (q2 - q1);
+      } else if (normalized <= 0.75) {
+        return q2 + ((normalized - 0.5) / 0.25) * (q3 - q2);
+      } else {
+        return q3 + ((normalized - 0.75) / 0.25) * (max - q3);
+      }
+    },
+    [option.range, option.quartiles]
+  );
+
+  // Transform marks to use normalized values
+  const normalizedMarks = useMemo(() => {
+    if (!marks) return undefined;
+    return marks.map((mark) => ({
+      ...mark,
+      key: `${option.key}-${mark.value}`,
+      value:
+        typeof mark.value === "number" ? mapToNormalizedRange(mark.value) : 0,
+    }));
+  }, [marks, mapToNormalizedRange, option.key]);
 
   const handleChange = (
     _event: React.SyntheticEvent | Event,
     newValue: number | number[]
   ) => {
-    setDisplayValue(
-      option.target || option.exact
-        ? ([newValue, newValue] as [number, number])
-        : (newValue as [number, number])
-    );
-    onChange(
-      option.target || option.exact
-        ? ([newValue, newValue] as [number, number])
-        : (newValue as [number, number])
-    );
+    // Transform the normalized slider values back to actual values
+    const transformedValue = Array.isArray(newValue)
+      ? ([
+          mapFromNormalizedRange(newValue[0] ?? 0),
+          mapFromNormalizedRange(newValue[1] ?? 1),
+        ] as [number, number])
+      : ([
+          mapFromNormalizedRange(newValue),
+          mapFromNormalizedRange(newValue),
+        ] as [number, number]);
+
+    setDisplayValue(transformedValue);
+    onChange(transformedValue);
   };
+
+  // Transform display values to normalized range for the slider
+  const normalizedDisplayValue = useMemo(() => {
+    const val0 =
+      typeof displayValue[0] === "number"
+        ? displayValue[0]
+        : option.range[0] ?? 0;
+    const val1 =
+      typeof displayValue[1] === "number"
+        ? displayValue[1]
+        : option.range[1] ?? 1;
+
+    return option.target
+      ? mapToNormalizedRange(val0)
+      : ([mapToNormalizedRange(val0), mapToNormalizedRange(val1)] as [
+          number,
+          number
+        ]);
+  }, [displayValue, option.target, mapToNormalizedRange, option.range]);
 
   useEffect(() => {
     setDisplayValue(value as [number, number]);
   }, [option.target, option.exact, value]);
 
   const display = (value: number, _index: number) => {
-    return displayOption(option, parseFloat(value.toString())) || "";
+    // Map the normalized value back to actual range for display
+    const actualValue = mapFromNormalizedRange(value);
+    return displayOption(option, actualValue) || "";
   };
 
   return (
     <Box sx={{ width: "100%", height: "500px", padding: "10px" }}>
       <Slider
+        key={`slider-${option?.key}`}
         getAriaLabel={() => option.label}
         orientation={"vertical"}
-        value={option.target ? displayValue[0] : displayValue}
-        onChange={(_e, newValue) =>
+        value={normalizedDisplayValue}
+        onChange={(_e, newValue) => {
+          const transformedValue = Array.isArray(newValue)
+            ? ([
+                mapFromNormalizedRange(newValue[0] ?? 0),
+                mapFromNormalizedRange(newValue[1] ?? 1),
+              ] as [number, number])
+            : ([
+                mapFromNormalizedRange(newValue),
+                mapFromNormalizedRange(newValue),
+              ] as [number, number]);
           setDisplayValue(
             option.target || option.exact
-              ? ([newValue, newValue] as [number, number])
-              : (newValue as [number, number])
-          )
-        }
+              ? [transformedValue[0], transformedValue[0]]
+              : transformedValue
+          );
+        }}
         onChangeCommitted={handleChange}
         valueLabelDisplay="on"
         getAriaValueText={display}
         valueLabelFormat={display}
-        // disabled={!enabled}
-        step={option.step}
-        min={option.key == "loudness" ? -21 : option.range[0]}
-        max={option.range[1]}
-        marks={marks}
+        step={0.001}
+        min={0}
+        max={1}
+        marks={normalizedMarks}
         track={option.target ? false : "normal"}
       />
     </Box>
@@ -170,6 +276,9 @@ type MaxKey = `max_${KnownKey}`;
 export interface OptionSettings {
   label: string;
   range: [number, number];
+  quartiles?: [number, number, number] | null;
+  qualitative: boolean;
+  integer: boolean;
   step: number;
   description: string;
   key: KnownKey;
@@ -593,13 +702,59 @@ export const option_examples: ExampleTracks = {
   popularity: [],
 };
 
+/*
+The dataset has 114000 rows and 21 columns
+          Unnamed: 0     popularity   duration_ms   danceability  \
+count  114000.000000  114000.000000  1.140000e+05  114000.000000   
+mean    56999.500000      33.238535  2.280292e+05       0.566800   
+std     32909.109681      22.305078  1.072977e+05       0.173542   
+min         0.000000       0.000000  0.000000e+00       0.000000   
+25%     28499.750000      17.000000  174066.000000       0.456000   
+50%     56999.500000      35.000000  212906.000000       0.580000   
+75%     85499.250000      50.000000  261506.000000       0.695000   
+max    113999.000000     100.000000  5237295.000000       0.985000   
+
+              energy            key       loudness           mode  \
+count  114000.000000  114000.000000  114000.000000  114000.000000   
+mean        0.641383       5.309140      -8.258960       0.637553   
+std         0.251529       3.559987       5.029337       0.480709   
+min         0.000000       0.000000     -49.531000       0.000000   
+25%         0.472000       2.000000     -10.013000       0.000000   
+50%         0.685000       5.000000      -7.004000       1.000000   
+75%         0.854000       8.000000      -5.003000       1.000000   
+max         1.000000      11.000000       4.532000       1.000000   
+
+         speechiness   acousticness  instrumentalness       liveness  \
+count  114000.000000  114000.000000     114000.000000  114000.000000   
+mean        0.084652       0.314910          0.156050       0.213553   
+std         0.105732       0.332523          0.309555       0.190378   
+min         0.000000       0.000000          0.000000       0.000000   
+25%         0.035900       0.016900          0.000000       0.098000   
+50%         0.048900       0.169000          0.000042       0.132000   
+75%         0.084500       0.598000          0.049000       0.273000   
+max         0.965000       0.996000          1.000000       1.000000   
+
+             valence          tempo  time_signature  
+count  114000.000000  114000.000000   114000.000000  
+mean        0.474068     122.147837        3.904035  
+std         0.259261      29.978197        0.432621  
+min         0.000000       0.000000        0.000000  
+25%         0.260000      99.218750        4.000000  
+50%         0.464000     122.017000        4.000000  
+75%         0.683000     140.071000        4.000000  
+max         0.995000     243.372000        5.000000  
+*/
+
 export const option_settings: OptionSettings[] = [
   {
     range: [0.0, 1.0],
     step: 0.001,
     label: "Acousticness",
+    integer: false,
+    // quartiles: [0.0169, 0.169, 0.598],
+    qualitative: false,
     description:
-      "A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic.",
+      "A confidence measure from 0.0 to 1.0 of whether the track is acoustic. 1.0 represents high confidence the track is acoustic. Acousticness seems to be largely a function of the date of release (mostly above 0.8 prior to 1950, then a steady decline until 1980, after which the average is below 0.3) and inversely correlated to loudness.",
     key: "acousticness",
     value: [0.0, 1.0],
     target: true,
@@ -609,6 +764,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Danceability",
+    integer: false,
+    quartiles: [0.456, 0.58, 0.695],
+    qualitative: true,
     description:
       "Danceability describes how suitable a track is for dancing based on a combination of musical elements including tempo, rhythm stability, beat strength, and overall regularity. A value of 0.0 is least danceable and 1.0 is most danceable.",
     key: "danceability",
@@ -620,6 +778,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Energy",
+    integer: false,
+    quartiles: [0.472, 0.685, 0.854],
+    qualitative: true,
     description:
       "Energy is a measure from 0.0 to 1.0 and represents a perceptual measure of intensity and activity. Typically, energetic tracks feel fast, loud, and noisy. For example, death metal has high energy, while a Bach prelude scores low on the scale. Perceptual features contributing to this attribute include dynamic range, perceived loudness, timbre, onset rate, and general entropy.",
     key: "energy",
@@ -631,7 +792,10 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Instrumentalness",
-    description: `Predicts whether a track contains no vocals. "Ooh" and "aah" sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly "vocal". The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0.`,
+    integer: false,
+    // quartiles: [0.0, 0.000042, 0.049],
+    qualitative: false,
+    description: `Predicts whether a track contains no vocals (not a measure of how instrumental a song is). "Ooh" and "aah" sounds are treated as instrumental in this context. Rap or spoken word tracks are clearly "vocal". The closer the instrumentalness value is to 1.0, the greater likelihood the track contains no vocal content. Values above 0.5 are intended to represent instrumental tracks, but confidence is higher as the value approaches 1.0.`,
     key: "instrumentalness",
     value: [0.0, 1.0],
     target: true,
@@ -641,6 +805,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Liveness",
+    integer: false,
+    // quartiles: [0.098, 0.132, 0.273],
+    qualitative: false,
     description: `Detects the presence of an audience in the recording. Higher liveness values represent an increased probability that the track was performed live. A value above 0.8 provides strong likelihood that the track is live.`,
     key: "liveness",
     value: [0.0, 1.0],
@@ -651,6 +818,9 @@ export const option_settings: OptionSettings[] = [
     range: [-60.0, 0.0],
     step: 0.001,
     label: "Loudness",
+    integer: false,
+    quartiles: [-10.013, -7.004, -5.003],
+    qualitative: true,
     description: `The overall loudness of a track in decibels (dB). Loudness values are averaged across the entire track and are useful for comparing relative loudness of tracks. Loudness is the quality of a sound that is the primary psychological correlate of physical strength (amplitude). Values typically range between -60 and 0 db.`,
     key: "loudness",
     value: [-60.0, 0.0],
@@ -660,6 +830,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Speechiness",
+    integer: false,
+    quartiles: [0.0359, 0.0489, 0.0845],
+    qualitative: true,
     description: `Speechiness detects the presence of spoken words in a track. The more exclusively speech-like the recording (e.g. talk show, audio book, poetry), the closer to 1.0 the attribute value. Values above 0.66 describe tracks that are probably made entirely of spoken words. Values between 0.33 and 0.66 describe tracks that may contain both music and speech, either in sections or layered, including such cases as rap music. Values below 0.33 most likely represent music and other non-speech-like tracks.`,
     key: "speechiness",
     value: [0.0, 1.0],
@@ -679,6 +852,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 1.0],
     step: 0.001,
     label: "Valence",
+    integer: false,
+    quartiles: [0.26, 0.464, 0.683],
+    qualitative: true,
     description: `A measure from 0.0 to 1.0 describing the musical positiveness conveyed by a track. Tracks with high valence sound more positive (e.g. happy, cheerful, euphoric), while tracks with low valence sound more negative (e.g. sad, depressed, angry).`,
     key: "valence",
     value: [0.0, 1.0],
@@ -689,6 +865,9 @@ export const option_settings: OptionSettings[] = [
     range: [0.0, 100.0],
     step: 1,
     label: "Popularity",
+    integer: true,
+    quartiles: [17.0, 35.0, 50.0],
+    qualitative: true,
     description: `The popularity of the track. The value will be between 0 and 100, with 100 being the most popular. The popularity of a track is a value between 0 and 100, with 100 being the most popular. The popularity is calculated by algorithm and is based, in the most part, on the total number of plays the track has had and how recent those plays are. Generally speaking, songs that are being played a lot now will have a higher popularity than songs that were played a lot in the past. Duplicate tracks (e.g. the same track from a single and an album) are rated independently. Artist and album popularity is derived mathematically from track popularity. Note: the popularity value may lag actual popularity by a few days: the value is not updated in real time.`,
     key: "popularity",
     value: [0.0, 100.0],
@@ -710,6 +889,9 @@ export const option_settings: OptionSettings[] = [
     range: [0, 1800000],
     step: 1000,
     label: "Duration",
+    integer: true,
+    quartiles: [174066.0, 212906.0, 261506.0],
+    qualitative: false,
     description: `The duration of the track in milliseconds.`,
     key: "duration_ms",
     value: [0, 1800000],
@@ -719,6 +901,9 @@ export const option_settings: OptionSettings[] = [
     range: [-1, 11],
     step: 1,
     label: "Key",
+    integer: true,
+    // quartiles: [2.0, 5.0, 8.0],
+    qualitative: false,
     description: `The key the track is in. Integers map to pitches using standard Pitch Class notation.`,
     key: "key",
     value: [-1, 11],
@@ -728,6 +913,9 @@ export const option_settings: OptionSettings[] = [
     range: [0, 1],
     step: 1,
     label: "Mode",
+    integer: true,
+    // quartiles: [0.000001, 0.499999, 0.999999],
+    qualitative: false,
     description: `Mode indicates the modality (major or minor) of a track, the type of scale from which its melodic content is derived. Major is represented by 1 and minor is 0.`,
     key: "mode",
     value: [0, 1],
@@ -737,6 +925,9 @@ export const option_settings: OptionSettings[] = [
     range: [50, 220],
     step: 0.001,
     label: "Tempo",
+    integer: false,
+    quartiles: [99.21875, 122.017, 140.071],
+    qualitative: true,
     description: `The overall estimated tempo of a track in beats per minute (BPM). In musical terminology, tempo is the speed or pace of a given piece and derives directly from the average beat duration.`,
     key: "tempo",
     value: [50, 220],
@@ -746,7 +937,10 @@ export const option_settings: OptionSettings[] = [
     range: [3, 7],
     step: 1,
     label: "Time Signature",
-    description: `The key the track is in. Integers map to pitches using standard Pitch Class notation.`,
+    integer: true,
+    quartiles: [4.0, 5.0, 6.0],
+    qualitative: false,
+    description: `The number of beats in each measure of quarter notes.`,
     key: "time_signature",
     value: [3, 7],
     target: true,
@@ -759,23 +953,97 @@ interface RecommendationsRequestPreset {
   description: string;
   filters: RecommendationsRequest;
 }
-const weatherPresets: RecommendationsRequestPreset[] = [
+
+const recommendationPresets: RecommendationsRequestPreset[] = [
   {
-    name: "Sunny Vibes",
-    emoji: "☀️",
-    description:
-      "Bright, happy, and high-energy tunes for clear skies and good moods.",
+    name: "Sunny Stroll",
+    emoji: "🌞🚶",
+    description: "Light, upbeat tunes for a carefree walk in sunshine.",
     filters: {
-      min_energy: 0.7,
-      min_valence: 0.7,
-      min_danceability: 0.6,
-      min_popularity: 50,
+      min_danceability: 0.4,
+      max_danceability: 0.7,
+      min_valence: 0.4,
+      max_valence: 0.8,
     },
   },
   {
-    name: "Rainy Day Reflection",
-    emoji: "🌧️",
-    description: "Laid-back, emotional songs for gray skies and introspection.",
+    name: "Rainy Day Mellow",
+    emoji: "🌧️☕",
+    description:
+      "Low-key and introspective tracks for a cozy, rainy afternoon.",
+    filters: {
+      max_energy: 0.5,
+      max_danceability: 0.5,
+      max_valence: 0.5,
+      min_loudness: -15.0, // not too quiet, not too loud
+    },
+  },
+  {
+    name: "Morning Boost",
+    emoji: "🌅☕",
+    description: "Feel-good energy to start your day off right.",
+    filters: {
+      min_energy: 0.6,
+      min_valence: 0.5,
+      min_tempo: 100,
+      max_tempo: 140,
+    },
+  },
+  {
+    name: "Dance Floor Ready",
+    emoji: "💃🕺",
+    description: "High energy, high danceability for a party atmosphere.",
+    filters: {
+      min_danceability: 0.7,
+      min_energy: 0.7,
+      min_tempo: 110,
+    },
+  },
+  {
+    name: "Chill Beats",
+    emoji: "❄️🎧",
+    description: "Laid-back vibes for relaxing or focusing.",
+    filters: {
+      max_energy: 0.5,
+      max_valence: 0.55,
+      max_tempo: 110,
+    },
+  },
+  {
+    name: "Feel-Good Classics",
+    emoji: "🌈✨",
+    description: "Popular, positive tracks to keep the mood bright.",
+    filters: {
+      min_valence: 0.6,
+      min_popularity: 50,
+      max_loudness: -5.0, // not overly loud
+    },
+  },
+  {
+    name: "Late-Night Lounge",
+    emoji: "🌙🍸",
+    description: "Smooth, low-tempo tunes for winding down your evening.",
+    filters: {
+      max_energy: 0.4,
+      max_tempo: 90,
+      max_valence: 0.6,
+    },
+  },
+  {
+    name: "Workout Fuel",
+    emoji: "🏋️🔥",
+    description: "High-energy tracks to power you through that workout.",
+    filters: {
+      min_energy: 0.75,
+      min_tempo: 120,
+      min_valence: 0.4,
+    },
+  },
+  {
+    name: "Heartbreak Haven",
+    emoji: "💔🕯️",
+    description:
+      "Moody, softer tunes for when you need that emotional release.",
     filters: {
       max_valence: 0.4,
       max_energy: 0.5,
@@ -783,51 +1051,118 @@ const weatherPresets: RecommendationsRequestPreset[] = [
     },
   },
   {
-    name: "Thunderstorm Drama",
-    emoji: "⛈️",
-    description: "Moody, cinematic tracks with a hint of power and mystery.",
+    name: "Feel the Flow (Hip-Hop)",
+    emoji: "🎤🗣️",
+    description:
+      "Speech-heavy tracks that ride the line between rap vocals and a solid musical groove.",
+    filters: {
+      min_speechiness: 0.3,
+      max_speechiness: 0.66, // typical range for a blend of rap & music
+      min_energy: 0.4,
+    },
+  },
+  {
+    name: "Sing-Along Hits",
+    emoji: "🎶🎉",
+    description: "Popular, energetic tracks to belt out loud with friends.",
+    filters: {
+      min_popularity: 60,
+      min_valence: 0.5,
+      min_energy: 0.6,
+    },
+  },
+  {
+    name: "Coffee Shop Acoustic",
+    emoji: "☕🎸",
+    description: "Gentle, moderately popular tunes with softer energy.",
+    filters: {
+      max_energy: 0.5,
+      max_loudness: -5.0,
+      min_popularity: 30,
+      max_valence: 0.7,
+    },
+  },
+  {
+    name: "Festival Frenzy",
+    emoji: "🎪🌟",
+    description: "High-tempo crowd-pleasers with positive vibes.",
+    filters: {
+      min_tempo: 130,
+      max_loudness: -3.0, // fairly loud
+      min_valence: 0.6,
+      min_danceability: 0.6,
+    },
+  },
+  {
+    name: "Sweet and Low",
+    emoji: "🍯🕯️",
+    description: "Quiet, gentle picks: minimal loudness and low tempo.",
+    filters: {
+      max_loudness: -10.0,
+      max_tempo: 80,
+      max_energy: 0.4,
+    },
+  },
+  {
+    name: "Road Trip Rock",
+    emoji: "🚗🎸",
+    description: "Feel-good energy at moderate tempo for the open road.",
     filters: {
       min_energy: 0.5,
-      max_valence: 0.3,
+      min_valence: 0.4,
+      min_tempo: 100,
+      max_tempo: 130,
     },
   },
   {
-    name: "Foggy Ambience",
-    emoji: "🌫️",
-    description: "Hazy, soft, and mysterious sounds for a fog-filled morning.",
+    name: "Hype Party",
+    emoji: "🔥🎉",
+    description: "Crank up the party with high popularity and loudness!",
     filters: {
-      max_energy: 0.4,
-      max_valence: 0.5,
-      max_popularity: 50,
+      min_popularity: 70,
+      min_loudness: -7.0, // not super quiet
+      min_energy: 0.7,
     },
   },
   {
-    name: "Light Snow Chill",
-    emoji: "❄️",
-    description: "Cozy, peaceful songs for a quiet snowy day.",
+    name: "Sunday Soothe",
+    emoji: "🌻😌",
+    description: "Gentle, relaxing day-off vibes with a touch of positivity.",
     filters: {
-      max_energy: 0.6,
-      max_liveness: 0.3,
+      max_energy: 0.55,
+      max_loudness: -8.0,
+      min_valence: 0.4,
     },
   },
   {
-    name: "Blizzard Isolation",
-    emoji: "🌨️",
+    name: "Pump Up Jam",
+    emoji: "⚡🔊",
+    description: "When you need that maximum adrenaline rush.",
+    filters: {
+      min_energy: 0.8,
+      min_loudness: -5.0,
+      min_tempo: 130,
+    },
+  },
+  {
+    name: "Easy Breezy",
+    emoji: "🌬️🛋️",
+    description: "Lighter danceability, mid-range tempo, medium positivity.",
+    filters: {
+      max_danceability: 0.6,
+      min_valence: 0.3,
+      max_tempo: 120,
+    },
+  },
+  {
+    name: "Nightclub Nostalgia",
+    emoji: "🌃💫",
     description:
-      "Sparse, melancholic, and ambient tracks for when the world is frozen over.",
+      "Throwback party vibes with high danceability & decent loudness.",
     filters: {
-      max_valence: 0.3,
-      max_danceability: 0.3,
-      max_energy: 0.4,
-    },
-  },
-  {
-    name: "Windy Whirl",
-    emoji: "🌪️",
-    description: "Raw and restless tracks to match gusty, chaotic weather.",
-    filters: {
-      min_energy: 0.6,
-      max_valence: 0.5,
+      min_danceability: 0.65,
+      min_popularity: 30,
+      min_loudness: -10.0, // at least somewhat loud
     },
   },
 ];
@@ -849,6 +1184,8 @@ export const OptionsSliders = ({
 }) => {
   // const [filters, setFilters] = useState<RecommendationsRequest>({limit: 100} as RecommendationsRequest)
   const [options, setOptions] = useState<OptionSettings[]>(option_settings);
+  const [optionExamples, setOptionExamples] =
+    useState<ExampleTracks>(option_examples);
   const [activeOption, setActiveOption] = useState<OptionSettings | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
   const [activePreset, setActivePreset] =
@@ -874,11 +1211,17 @@ export const OptionsSliders = ({
           option.range[1] !== option.value?.[1]
         ) {
           if (option.value?.[0] == option.value?.[1] && !option.exact) {
-            cur[target_key] = option.value?.[0];
+            cur[target_key] = option.integer
+              ? Math.round(option.value?.[0] as number)
+              : option.value?.[0];
             emoji_list.push(displayOption(option, option.value?.[0] as number));
           } else {
-            cur[min_key] = option.value?.[0];
-            cur[max_key] = option.value?.[1];
+            cur[min_key] = option.integer
+              ? Math.round(option.value?.[0] as number)
+              : option.value?.[0];
+            cur[max_key] = option.integer
+              ? Math.round(option.value?.[1] as number)
+              : option.value?.[1];
             if (option.value?.[0] == option.value?.[1]) {
               emoji_list.push(
                 displayOption(option, option.value?.[0] as number)
@@ -904,13 +1247,17 @@ export const OptionsSliders = ({
   }, [JSON.stringify(options)]);
 
   useEffect(() => {
-    let marks: Mark[] = [];
+    // Use setTimeout to ensure the clear happens before setting new marks
+
+    let newMarks: Mark[] = [];
     if (activeOption) {
-      if (option_examples[activeOption.key].length > 0) {
-        marks = option_examples[activeOption.key].map((example) => ({
+      if (optionExamples[activeOption.key].length > 0) {
+        newMarks = optionExamples[activeOption.key].map((example) => ({
+          key: `${activeOption.key}-${example.name}`,
           value: example.value,
           label: (
             <ExampleTrack
+              key={`${activeOption.key}-${example.name}`}
               artist={example.artist}
               name={example.name}
               img={example.img}
@@ -918,49 +1265,57 @@ export const OptionsSliders = ({
             />
           ),
         }));
-      } else if (activeOption.key == "key") {
-        marks = Array.from({ length: 12 }, (_, i) => ({
+      } else if (activeOption.key === "key") {
+        newMarks = Array.from({ length: 12 }, (_, i) => ({
+          key: `${activeOption.key}-${i}`,
           value: i,
           label: keyString(i, 1),
         }));
-      } else if (activeOption.key == "time_signature") {
-        marks = Array.from({ length: 5 }, (_, i) => ({
+      } else if (activeOption.key === "time_signature") {
+        newMarks = Array.from({ length: 5 }, (_, i) => ({
+          key: `${activeOption.key}-${i + 3}`,
           value: i + 3,
           label: `${i + 3}/4`,
         }));
-      } else if (activeOption.key == "duration_ms") {
-        marks = [1, 2, 3, 5, 10, 15, 30].map((m) => ({
+      } else if (activeOption.key === "duration_ms") {
+        newMarks = [1, 2, 3, 5, 10, 15, 30].map((m) => ({
+          key: `${activeOption.key}-${m}`,
           value: m * 60_000,
           label: `${msToMinutes(m * 60_000)}m`,
         }));
       }
+      setMarks(newMarks);
     }
-    setMarks(marks);
-  }, [
-    activeOption,
-    option_examples.popularity,
-    option_examples.loudness,
-    option_examples.tempo,
-  ]);
+  }, [activeOption, JSON.stringify(optionExamples)]);
 
   useEffect(() => {
-    console.log("popular_tracks", popular_tracks);
+    console.log("marks", marks);
+  }, [marks]);
+
+  useEffect(() => {
     if (popular_tracks.length > 0) {
-      option_examples["popularity"] = popular_tracks;
+      setOptionExamples((cur) => ({
+        ...cur,
+        popularity: popular_tracks,
+      }));
     }
   }, [popular_tracks]);
 
   useEffect(() => {
-    console.log("loudness_tracks", loudness_tracks);
     if (loudness_tracks.length > 0) {
-      option_examples["loudness"] = loudness_tracks;
+      setOptionExamples((cur) => ({
+        ...cur,
+        loudness: loudness_tracks,
+      }));
     }
   }, [loudness_tracks]);
 
   useEffect(() => {
-    console.log("tempo_tracks", tempo_tracks);
     if (tempo_tracks.length > 0) {
-      option_examples["tempo"] = tempo_tracks;
+      setOptionExamples((cur) => ({
+        ...cur,
+        tempo: tempo_tracks,
+      }));
     }
   }, [tempo_tracks]);
 
@@ -1027,7 +1382,7 @@ export const OptionsSliders = ({
             });
           }}
         >
-          {weatherPresets.map((preset) => (
+          {recommendationPresets.map((preset) => (
             <Option key={preset.name} value={preset}>
               {preset.emoji} {preset.name} <em>{preset.description}</em>
             </Option>

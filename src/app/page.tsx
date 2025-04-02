@@ -999,7 +999,7 @@ function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             The track you choose here will function as the &quot;seed&quot; for
             the playlist that gets generated. Essentially, the first trip around
             the circle of fifths will start with this track as inspiration along
-            with any vibes you've selected.
+            with any vibes you&apos;ve selected.
           </div>
           {selected?.id ? (
             <div style={{ width: "100%", height: "100%" }}>

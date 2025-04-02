@@ -31,6 +31,8 @@
   "devDependencies": {
     "@straw-hat/tsconfig": "^4.2.2",
     "@types/node": "^20.14.1",
+    "eslint": "8.57.1",
+    "eslint-config-next": "15.2.4",
     "typescript": "5.4.5"
   }
 }

@@ -1343,7 +1343,10 @@ export const OptionsSliders = ({
                 ) {
                   if (preset?.[target_key]) {
                     option.target = true;
-                    option.value = [preset[target_key], preset[target_key]];
+                    option.value = [
+                      preset[target_key] || 0,
+                      preset[target_key] || 0,
+                    ];
                   } else {
                     option.target = false;
                   }
@@ -1355,7 +1358,7 @@ export const OptionsSliders = ({
                       preset[min_key],
                       preset[max_key]
                     );
-                    option.value = [preset[min_key], preset[max_key]];
+                    option.value = [preset[min_key] || 0, preset[max_key] || 0];
                   } else if (preset?.[min_key]) {
                     console.log(
                       option.key,
@@ -1363,7 +1366,7 @@ export const OptionsSliders = ({
                       preset[min_key],
                       option.range[1]
                     );
-                    option.value = [preset[min_key], option.range[1]];
+                    option.value = [preset[min_key] || 0, option.range[1]];
                   } else if (preset?.[max_key]) {
                     console.log(
                       option.key,
@@ -1371,7 +1374,7 @@ export const OptionsSliders = ({
                       option.range[0],
                       preset[max_key]
                     );
-                    option.value = [option.range[0], preset[max_key]];
+                    option.value = [option.range[0], preset[max_key] || 0];
                   }
                 } else {
                   option.target = true;

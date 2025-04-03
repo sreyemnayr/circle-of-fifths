@@ -3,14 +3,12 @@
 import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
 import React from "react";
-import { CssVarsProvider } from '@mui/joy/styles';
-import CssBaseline from '@mui/joy/CssBaseline';
+import CssBaseline from "@mui/material/CssBaseline";
 //import getInitColorSchemeScript from "@mui/system/cssVars/getInitColorSchemeScript";
-import { getInitColorSchemeScript } from '@mui/joy/styles';
-import Button from '@mui/joy/Button';
+// import { getInitColorSchemeScript } from "@mui/material/styles";
+import Button from "@mui/material/Button";
 
-const baseUrl = "https://www.fifths.xyz"
-
+const baseUrl = "https://www.fifths.xyz";
 
 function AuthSessionProvider({
   session,
@@ -22,41 +20,47 @@ function AuthSessionProvider({
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
-      setMounted(true);
-    }, []);
-  
-    if (!mounted) {
-      // to avoid layout shift, render a placeholder button
-      return <SessionProvider session={session} baseUrl={baseUrl} basePath={`/api/nextauth`}>
-      
-              {/* {children} */}
-              <body>
-                <Button>Sign in</Button>
-              </body>
-              
-      
-      </SessionProvider>;
-    }
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    // to avoid layout shift, render a placeholder button
+    return (
+      <SessionProvider
+        session={session}
+        baseUrl={baseUrl}
+        basePath={`/api/nextauth`}
+      >
+        {/* {children} */}
+        <body>
+          <Button>Sign in</Button>
+        </body>
+      </SessionProvider>
+    );
+  }
 
   return (
-    <CssVarsProvider defaultMode="dark">
+    <>
       {/* must be used under CssVarsProvider */}
-      
-            <CssBaseline disableColorScheme />
-            {getInitColorSchemeScript({
-              // These properties are normally set when importing from @mui/material,
-              // but we have to set manually because we are importing from @mui/system.
-              attribute: "data-mui-color-scheme",
-              modeStorageKey: "mui-mode",
-              colorSchemeStorageKey: "mui-color-scheme",
-              // All options that you pass to CssVarsProvider you should also pass here.
-              defaultMode: "dark",
-            })}
-            <SessionProvider session={session} baseUrl={baseUrl} basePath={`/api/nextauth`}>
-              {children}
-            </SessionProvider>
-            
-    </CssVarsProvider>
+
+      <CssBaseline enableColorScheme />
+      {/* {getInitColorSchemeScript({
+        // These properties are normally set when importing from @mui/material,
+        // but we have to set manually because we are importing from @mui/system.
+        attribute: "data-mui-color-scheme",
+        modeStorageKey: "mui-mode",
+        colorSchemeStorageKey: "mui-color-scheme",
+        // All options that you pass to CssVarsProvider you should also pass here.
+        defaultMode: "dark",
+      })} */}
+      <SessionProvider
+        session={session}
+        baseUrl={baseUrl}
+        basePath={`/api/nextauth`}
+      >
+        {children}
+      </SessionProvider>
+    </>
   );
 }
 

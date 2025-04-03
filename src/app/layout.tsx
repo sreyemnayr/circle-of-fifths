@@ -1,12 +1,17 @@
 import "@/app/globals.css";
 import AuthSessionProvider from "@/components/AuthSessionProvider";
-import { auth } from "@/auth"
+import { auth } from "@/auth";
 import { Inter } from "next/font/google";
+import type { Metadata } from "next";
 
-import Sheet from '@mui/joy/Sheet';
-
+import Paper from "@mui/material/Paper";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "Spotifier",
+  description: "A Spotify playlist generator",
+};
 
 export default async function RootLayout({
   children,
@@ -19,11 +24,10 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <AuthSessionProvider session={session}>
-      <body className={inter.className} style={{overflow: "auto"}}>
-      <Sheet color="neutral" >{children}</Sheet>
-      {/* The rest of your application */}
-
-      </body>
+        <body className={inter.className} style={{ overflow: "auto" }}>
+          <Paper elevation={3}>{children}</Paper>
+          {/* The rest of your application */}
+        </body>
       </AuthSessionProvider>
     </html>
   );

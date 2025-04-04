@@ -35,6 +35,7 @@ import TabList from "@mui/lab/TabList";
 import Tab from "@mui/material/Tab";
 import TabPanel from "@mui/lab/TabPanel";
 import Button from "@mui/material/Button";
+import TextField from "@mui/material/TextField";
 
 import { msToTime } from "@/util/time";
 import { getNextTracks, chooseStartingFive } from "@/util/playlister";
@@ -365,8 +366,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             ) : (
               <>
                 <h2>Search</h2>
-                <input
-                  type="text"
+                <TextField
+                  label="Search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -392,6 +393,10 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   <Card
                     className="m-1 border-1 border-transparent hover:border-green-500 transition-colors duration-300 hover:cursor-pointer"
                     key={track.track.id}
+                    onClick={() => {
+                      setSelectedTrack(track);
+                      setIndex(3);
+                    }}
                   >
                     <TrackChoice track={track} />
                   </Card>
@@ -510,7 +515,20 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             >
               {loading ? loading : "Save Playlist"}
             </Button>
-            <table>
+            {newPlaylistTracks.map((track) =>
+              isTrack(track.track) ? (
+                <Card
+                  className="m-1 border-1 border-transparent hover:border-blue-500 transition-colors duration-300 hover:cursor-pointer"
+                  key={track.track.id}
+                >
+                  <TrackChoice track={track} />
+                </Card>
+              ) : (
+                <></>
+              )
+            )}
+
+            {/* <table>
               <thead>
                 <tr>
                   <th>✅</th>
@@ -547,7 +565,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   )
                 )}
               </tbody>
-            </table>
+            </table> */}
           </Paper>
         </TabPanel>
       </TabContext>

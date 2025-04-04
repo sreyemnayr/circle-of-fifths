@@ -25,12 +25,19 @@ export async function getRepresentativeTrack(
   min: number,
   max: number
 ) {
-  const track = await collection.findOne(
-    {
-      [`features.${feature}`]: { $gte: min, $lte: max },
-    },
-    { sort: { popularity: -1 } }
-  );
+  const tracks = await collection
+    .find(
+      {
+        [`features.${feature}`]: { $gte: min, $lt: max },
+      },
+      { sort: { popularity: -1 } }
+    )
+    .limit(10)
+    .toArray();
+  if (tracks.length === 0) {
+    return null;
+  }
+  const track = tracks[Math.floor(Math.random() * tracks.length)];
   return track;
 }
 

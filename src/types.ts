@@ -69,7 +69,7 @@ export interface IExampleTrack {
   artist: string;
   name: string;
   img: string;
-  value: number;
+  value: number | string;
 }
 
 export type ExampleTracks = {
@@ -104,4 +104,9 @@ export interface AppSettings {
   allow_explicit: boolean;
   max_tracks: number;
   min_time: number;
+}
+
+export interface Mark {
+  value: number;
+  label?: React.ReactNode;
 }

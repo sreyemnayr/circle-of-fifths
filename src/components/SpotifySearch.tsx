@@ -19,10 +19,10 @@ import {
   isTrack,
 } from "@/util/spotify";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { OptionsSliders } from "@/components/OptionsSliders";
 // import { NewOptionsSliders } from "@/components/NewOptionsSliders";
-import { keyString, relativeKey } from "@/util/keys";
+import { keyString } from "@/util/keys";
 
 import { RateLimit } from "async-sema";
 
@@ -39,6 +39,8 @@ import Button from "@mui/material/Button";
 import { msToTime } from "@/util/time";
 import { getNextTracks, chooseStartingFive } from "@/util/playlister";
 import { app_settings } from "@/data/data";
+import { TrackChoice } from "./ExampleTrack";
+import Card from "@mui/material/Card";
 
 const rate_limiter = RateLimit(20, { timeUnit: 10000 });
 
@@ -104,24 +106,29 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
     })();
   }, [selectedTrack, selectedPlaylist, selectedPlaylistTracks]);
 
+  const refreshFilteredTracks = useCallback(() => {
+    setFilterTracks([]);
+    (async () => {
+      try {
+        const new_filters = {
+          ...filters,
+          limit: 25,
+          seed_genres: ["pop", "rock", "country", "acoustic", "r-n-b"],
+        };
+        const results = await getRecommendedTracks(new_filters, rate_limiter);
+        setFilterTracks(results);
+      } catch (e: any) {
+        _setWarning(e.message);
+      }
+    })();
+  }, [filters]);
+
   useEffect(() => {
     if (Object.keys(filters).length > 1) {
       console.log("filters", filters);
-      (async () => {
-        try {
-          const new_filters = {
-            ...filters,
-            limit: 25,
-            seed_genres: ["pop", "rock", "country", "acoustic", "r-n-b"],
-          };
-          const results = await getRecommendedTracks(new_filters, rate_limiter);
-          setFilterTracks(results);
-        } catch (e: any) {
-          _setWarning(e.message);
-        }
-      })();
+      refreshFilteredTracks();
     }
-  }, [filters]);
+  }, [filters, refreshFilteredTracks]);
 
   useEffect(() => {
     (async () => {
@@ -261,6 +268,17 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               ignore={["key", "mode"]}
               setFilters={setFilters}
               setFilterEmoji={setFilterEmoji}
+              filterEmoji={filterEmoji}
+              letsGoButton={
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setIndex(2);
+                  }}
+                >
+                  Let&apos;s go
+                </Button>
+              }
             />
             {/* <OptionsMultidimensional
                 ignore={[
@@ -354,8 +372,39 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 />
               </>
             )}
+            <Paper
+              variant="outlined"
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "10px",
+                width: "100%",
+                flexWrap: "wrap",
+              }}
+            >
+              {(selectedPlaylistTracks && selectedPlaylistTracks.length > 0
+                ? selectedPlaylistTracks
+                : filterTracks || []
+              ).map((track) =>
+                isTrack(track.track) ? (
+                  <Card
+                    className="m-1 border-1 border-transparent hover:border-green-500 transition-colors duration-300 hover:cursor-pointer"
+                    key={track.track.id}
+                  >
+                    <TrackChoice track={track} />
+                  </Card>
+                ) : (
+                  <></>
+                )
+              )}
+              <Button variant="contained" onClick={refreshFilteredTracks}>
+                Refresh
+              </Button>
+            </Paper>
 
-            <table>
+            {/* <table>
               <thead>
                 <tr>
                   <th>✅</th>
@@ -419,7 +468,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                     </tr>
                   ))}
               </tbody>
-            </table>
+            </table> */}
           </Paper>
         </TabPanel>
         <TabPanel value={3}>

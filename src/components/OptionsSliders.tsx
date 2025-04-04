@@ -1,11 +1,9 @@
 "use client";
 import * as React from "react";
-import Box from "@mui/material/Box";
 import Slider from "@mui/material/Slider";
 import FormControl from "@mui/material/FormControl";
 
 import FormHelperText from "@mui/material/FormHelperText";
-import { Mark } from "@mui/base/useSlider";
 
 import {
   OptionSettings,
@@ -38,12 +36,15 @@ import Button from "@mui/material/Button";
 import Switch from "@mui/material/Switch";
 import Typography from "@mui/material/Typography";
 
-import { msToTime, msToMinutes } from "@/util/time";
+import { msToMinutes } from "@/util/time";
 import { ExampleTrack } from "./ExampleTrack";
-
+import { displayOption } from "@/util/options";
 import { findRepresentativeTracks } from "@/util/spotify";
 import Paper from "@mui/material/Paper";
 import Card from "@mui/material/Card";
+
+import { Mark } from "@/types";
+import InputLabel from "@mui/material/InputLabel";
 
 export const RangeSlider = ({
   option,
@@ -228,74 +229,18 @@ export const RangeSlider = ({
   );
 };
 
-const displayOption = (option: OptionSettings, value: number) => {
-  if (option?.emoji_scale) {
-    if (option.key == "popularity") {
-      value = value / 100;
-    }
-    return option.emoji_scale[
-      Math.min(
-        Math.round(value * option.emoji_scale.length),
-        option.emoji_scale.length - 1
-      )
-    ];
-  }
-  if (option.key == "loudness") {
-    if (value == option.range[0]) {
-      return "🔇" + value.toFixed(0) + "db";
-    } else if (value > -20) {
-      return "🔊" + value.toFixed(0) + "db";
-    } else if (value > -40) {
-      return "🔉" + value.toFixed(0) + "db";
-    } else {
-      return "🔈" + value.toFixed(0) + "db";
-    }
-  }
-  if (option.key == "mode") {
-    return ["minor", "major"][parseInt(value.toString())];
-  }
-  if (option.key == "tempo") {
-    if (value == option.range[0]) {
-      return "🚶" + value.toFixed(0) + "bpm";
-    } else if (value == option.range[1]) {
-      return "🏃" + value.toFixed(0) + "bpm";
-    } else {
-      return value.toFixed(0) + "bpm";
-    }
-  }
-  if (option.key == "time_signature") {
-    if (value == option.range[0]) {
-      return "🎼" + value.toFixed(0) + "/4";
-    } else if (value == option.range[1]) {
-      return " " + value.toFixed(0) + "/4";
-    } else {
-      return value.toFixed(0) + "/4";
-    }
-  }
-  if (option.key == "key") {
-    return keyString(parseInt(value.toString()), 1);
-  }
-  if (option.key == "duration_ms") {
-    if (value == option.range[0]) {
-      return "⌛" + msToTime(value);
-    } else if (value == option.range[1]) {
-      return "⏳" + msToTime(value);
-    } else {
-      return msToTime(value);
-    }
-  }
-
-  return value.toString() || "";
-};
-
 export const OptionsSliders = ({
   ignore = [],
   setFilters,
   setFilterEmoji,
+  filterEmoji,
+  letsGoButton,
 }: {
   ignore?: (KnownKey | PopularityKey)[];
   setFilters: Dispatch<SetStateAction<RecommendationsRequest>>;
   setFilterEmoji: Dispatch<SetStateAction<string>>;
+  filterEmoji: string;
+  letsGoButton: React.ReactNode;
 }) => {
   // const [filters, setFilters] = useState<RecommendationsRequest>({limit: 100} as RecommendationsRequest)
   const [options, setOptions] = useState<OptionSettings[]>(option_settings);
@@ -305,8 +250,10 @@ export const OptionsSliders = ({
 
   const [activeOption, setActiveOption] = useState<OptionSettings | null>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
-  const [activePreset, setActivePreset] =
-    useState<RecommendationsRequestPreset | null>(null);
+  const [activePreset, setActivePreset] = useState<
+    RecommendationsRequestPreset | undefined
+  >(undefined);
+
   useEffect(() => {
     console.log(
       "Triggered: options, activePreset, activeOption, setFilters, setFilterEmoji",
@@ -315,7 +262,7 @@ export const OptionsSliders = ({
       activeOption
     );
     if (!activeOption) {
-      setActiveOption(options[0] || null);
+      setActiveOption(options.find((o) => o.key === "energy") || null);
     }
 
     setFilters((cur) => {
@@ -360,10 +307,16 @@ export const OptionsSliders = ({
         }
       }
 
-      if (activePreset) {
+      if (activePreset?.name && activePreset.name !== "custom") {
         setFilterEmoji(activePreset.emoji);
       } else {
         setFilterEmoji(emoji_list.join(" + "));
+        // setCustomPreset({
+        //   name: "custom",
+        //   emoji: emoji_list.join(" + "),
+        //   description: "Dialed in manually. It's bound to be groovy.",
+        //   filters: cur,
+        // });
       }
       return { ...cur };
     });
@@ -372,6 +325,13 @@ export const OptionsSliders = ({
   useEffect(() => {
     console.log("Triggered: activeOption 1", activeOption);
     if (activeOption) {
+      setMarks(
+        activeOption?.quartiles?.map((q) => ({
+          key: `${activeOption.key}-${q}-blank`,
+          value: q,
+          label: displayOption(activeOption, q),
+        })) ?? []
+      );
       setSampleTracks([]);
       setSampleTracksLoading(true);
     }
@@ -414,7 +374,9 @@ export const OptionsSliders = ({
                     artist={example.artist}
                     name={example.name}
                     img={example.img}
-                    value={example.value}
+                    value={
+                      displayOption(activeOption, Number(example.value)) ?? ""
+                    }
                   />
                 ),
               } as Mark)
@@ -464,12 +426,23 @@ export const OptionsSliders = ({
         padding: "20px",
       }}
     >
-      <Card sx={{ width: "100%", padding: "19px", paddingLeft: "61px" }}>
-        <div>Choose a preset</div>
-        <FormControl sx={{ width: "100%" }}>
+      <Card
+        sx={{
+          width: "100%",
+          padding: "19px",
+          paddingLeft: "61px",
+          display: "flex",
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        <FormControl sx={{ flexGrow: 1 }}>
+          <InputLabel id="preset-label">Choose a preset</InputLabel>
           <Select
-            value={activePreset?.name || ""}
-            label={"Preset"}
+            autoWidth
+            value={activePreset?.name ?? ""}
+            labelId="preset-label"
+            label={"Select a preset"}
             onChange={(event) => {
               console.log("v", event.target.value);
               const v = recommendationPresets.find(
@@ -539,32 +512,50 @@ export const OptionsSliders = ({
           >
             {recommendationPresets.map((preset) => (
               <MenuItem key={preset.name} value={preset.name}>
-                {preset.emoji} {preset.name} <em>{preset.description}</em>
+                {preset.emoji} {preset.name}{" "}
+                <em className="text-xs ml-2">{preset.description}</em>
               </MenuItem>
             ))}
+            <MenuItem key="custom" value="custom">
+              {"Custom Vibes"} {filterEmoji}
+              <em className="text-xs ml-2">
+                Dialed in manually. It&apos;s bound to be groovy.
+              </em>
+            </MenuItem>
           </Select>
         </FormControl>
+        {filterEmoji !== "" && <>{letsGoButton}</>}
       </Card>
-      <Card sx={{ width: "80%", marginTop: "20px" }}>
-        {activeOption && (
-          <FormControl
+
+      {activeOption && (
+        <Card
+          sx={{
+            width: "80%",
+            marginTop: "20px",
+            justifyContent: "space-around",
+            marginBottom: "40px",
+            display: "flex",
+            flexDirection: "row",
+            height: "100%",
+            padding: "20px",
+          }}
+          variant="outlined"
+        >
+          <Card
             sx={{
-              width: "100%",
-              justifyContent: "space-around",
-              marginBottom: "40px",
               display: "flex",
-              flexDirection: "row",
-              height: "100%",
+              flexDirection: "column",
+              maxWidth: "50%",
+              padding: "20px",
             }}
-            key={`${activeOption.key}_${activeOption.value?.[0]}_${activeOption.value?.[1]}`}
           >
-            <Card
+            <FormControl
               sx={{
-                display: "flex",
-                flexDirection: "column",
-                maxWidth: "50%",
+                width: "100%",
               }}
+              key={`${activeOption.key}_${activeOption.value?.[0]}_${activeOption.value?.[1]}`}
             >
+              <InputLabel id="feature-label">Audio Feature</InputLabel>
               <Select
                 onChange={(event) =>
                   setActiveOption(
@@ -573,11 +564,15 @@ export const OptionsSliders = ({
                     ) as OptionSettings
                   )
                 }
+                labelId="feature-label"
                 label={"Audio Feature"}
                 value={activeOption.key}
               >
                 {options
                   .filter((option) => !ignore.includes(option.key))
+                  .toSorted(
+                    (a, b) => Number(b.qualitative) - Number(a.qualitative)
+                  )
                   .toSorted(
                     (a, b) =>
                       Number(
@@ -640,7 +635,7 @@ export const OptionsSliders = ({
                 </Button>
               )}
               <Switch
-                checked={activeOption.target}
+                checked={activeOption?.target ?? false}
                 onChange={(e) =>
                   setOptions((cur) => {
                     const updateOption = cur.find(
@@ -649,40 +644,57 @@ export const OptionsSliders = ({
 
                     if (updateOption) {
                       updateOption.target = e.target.checked;
+
                       if (!updateOption.target) {
-                        const low_distance =
-                          updateOption.value?.[0] ||
-                          updateOption.range[0] - updateOption.range[0];
-                        const high_distance =
-                          updateOption.range[1] -
-                          (updateOption.value?.[1] || updateOption.range[1]);
-                        const min_distance = Math.min(
-                          low_distance,
-                          high_distance
-                        );
-                        updateOption.value = [
-                          Math.max(
-                            (updateOption.value?.[0] || updateOption.range[0]) -
-                              min_distance,
-                            updateOption.range[0]
-                          ),
-                          Math.min(
-                            (updateOption.value?.[1] || updateOption.range[1]) +
-                              min_distance,
-                            updateOption.range[1]
-                          ),
-                        ];
+                        // if the target is not set, we need to set the value to the range
+                        if (updateOption.key == "loudness") {
+                          updateOption.value = [
+                            updateOption.range[0],
+                            updateOption.range[1],
+                          ];
+                        } else {
+                          const low_distance =
+                            updateOption.value?.[0] ||
+                            updateOption.range[0] - updateOption.range[0];
+                          const high_distance =
+                            updateOption.range[1] -
+                            (updateOption.value?.[1] || updateOption.range[1]);
+                          const min_distance = Math.min(
+                            low_distance,
+                            high_distance
+                          );
+                          updateOption.value = [
+                            Math.max(
+                              (updateOption.value?.[0] ||
+                                updateOption.range[0]) - min_distance,
+                              updateOption.range[0]
+                            ),
+                            Math.min(
+                              (updateOption.value?.[1] ||
+                                updateOption.range[1]) + min_distance,
+                              updateOption.range[1]
+                            ),
+                          ];
+                        }
                       } else {
-                        updateOption.value = [
-                          ((updateOption.value?.[0] || updateOption.range[0]) +
-                            (updateOption.value?.[1] ||
-                              updateOption.range[1])) /
-                            2,
-                          ((updateOption.value?.[0] || updateOption.range[0]) +
-                            (updateOption.value?.[1] ||
-                              updateOption.range[1])) /
-                            2,
-                        ];
+                        // if the target is set, we need to set the value to the average of the range if they're not already set to the range
+                        if (
+                          updateOption.value?.[0] !== updateOption.range[0] ||
+                          updateOption.value?.[1] !== updateOption.range[1]
+                        ) {
+                          updateOption.value = [
+                            ((updateOption.value?.[0] ||
+                              updateOption.range[0]) +
+                              (updateOption.value?.[1] ||
+                                updateOption.range[1])) /
+                              2,
+                            ((updateOption.value?.[0] ||
+                              updateOption.range[0]) +
+                              (updateOption.value?.[1] ||
+                                updateOption.range[1])) /
+                              2,
+                          ];
+                        }
                       }
                     }
                     return [...cur];
@@ -723,8 +735,10 @@ export const OptionsSliders = ({
               />
 
               <Switch
-                disabled={!activeOption.target}
-                checked={!activeOption.target || activeOption.exact}
+                disabled={!activeOption?.target}
+                checked={
+                  !activeOption?.target || (activeOption?.exact ?? false)
+                }
                 onChange={(e) =>
                   setOptions((cur) => {
                     const updateOption = cur.find(
@@ -741,7 +755,8 @@ export const OptionsSliders = ({
                   track: {
                     children: (
                       <Fragment>
-                        {!activeOption.target || activeOption.exact ? (
+                        {!activeOption?.target ||
+                        (activeOption?.exact ?? false) ? (
                           <Typography
                             component="span"
                             align="inherit"
@@ -769,28 +784,35 @@ export const OptionsSliders = ({
                   "--Switch-trackHeight": "31px",
                 }}
               />
-            </Card>
-            <RangeSlider
-              key={`range-slider-${activeOption.key}`}
-              option={{ ...activeOption }}
-              value={activeOption.value}
-              onChange={(e) =>
-                setOptions((cur) => {
-                  const updateOption = cur.find(
-                    (c) => c.key === activeOption.key
-                  );
+            </FormControl>
+          </Card>
 
-                  if (updateOption) {
-                    updateOption.value = e as [number, number];
-                  }
-                  return [...cur];
-                })
-              }
-              marks={[...marks]}
-            />
-          </FormControl>
-        )}
-      </Card>
+          <RangeSlider
+            key={`range-slider-${activeOption.key}`}
+            option={{ ...activeOption }}
+            value={activeOption.value}
+            onChange={(e) => {
+              setActivePreset({
+                name: "custom",
+                emoji: filterEmoji,
+                description: "Dialed in manually. It's bound to be groovy.",
+                filters: {},
+              } as RecommendationsRequestPreset);
+              setOptions((cur) => {
+                const updateOption = cur.find(
+                  (c) => c.key === activeOption.key
+                );
+
+                if (updateOption) {
+                  updateOption.value = e as [number, number];
+                }
+                return [...cur];
+              });
+            }}
+            marks={[...marks]}
+          />
+        </Card>
+      )}
     </Paper>
   );
 };

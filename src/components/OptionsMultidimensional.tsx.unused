@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RecommendationsRequest } from "@spotify/web-api-ts-sdk";
-import { OptionSettings, option_settings } from "./OptionsSliders";
-
+import { option_settings } from "@/data/data";
+import { OptionSettings } from "@/types";
 interface Point {
   x: number;
   y: number;

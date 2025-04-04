@@ -51,6 +51,7 @@ const spotifyProfile = SpotifyProvider({
   // clientSecret: credentials.clientSecret,
   clientId: process.env.SPOTIFY_CLIENT_ID,
   clientSecret: process.env.SPOTIFY_CLIENT_SECRET,
+  checks: ["pkce"],
 });
 
 // console.log(credentials)

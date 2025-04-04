@@ -21,11 +21,28 @@ export default function Home() {
           disableScrollLock
           open={displayOptions}
           onClose={() => setDisplayOptions(false)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setDisplayOptions(false);
+          }}
         >
-          <Box>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              width: "100%",
+              height: "100%",
+            }}
+          >
             <img
               src="/circle.jpg"
-              style={{ maxHeight: "80vw", maxWidth: "80vh", aspectRatio: "1" }}
+              style={{
+                maxHeight: "80vw",
+                maxWidth: "80vh",
+                aspectRatio: "1",
+                objectFit: "contain",
+              }}
               alt="Circle of Fifths"
             />
           </Box>

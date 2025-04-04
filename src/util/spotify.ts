@@ -261,14 +261,18 @@ export const findRepresentativeTracks = async (
       tracks[i] = track || ({} as PlaylistedTrack<TrackItemWithAudioFeatures>);
     }
   }
-  return tracks
-    .filter((track) => track !== null)
-    .map((track) => ({
-      value: track.track.features?.[option.key as KnownKey],
-      name: track.track.name,
-      artist: "album" in track.track ? track.track.album.artists[0]?.name : "",
-      img: "album" in track.track ? track.track.album.images[0]?.url : "",
-    })) as IExampleTrack[];
+  const notNullTracks = tracks.filter(
+    (track) => track !== null && isTrack(track.track)
+  ) as PlaylistedTrack<TrackItemWithAudioFeatures>[];
+
+  const exampleTracks = notNullTracks.map((track) => ({
+    value: track.track.features?.[option.key as KnownKey],
+    name: track.track.name,
+    artist: "album" in track.track ? track.track.album.artists[0]?.name : "",
+    img: "album" in track.track ? track.track.album.images[0]?.url : "",
+  })) as IExampleTrack[];
+
+  return exampleTracks;
 };
 
 export const findPopularTracks = async (
@@ -430,5 +434,5 @@ export const getRecommendedTracks = async (
 };
 
 export function isTrack(item: any): item is Track {
-  return (item as Track).album !== undefined;
+  return (item as Track)?.album !== undefined;
 }

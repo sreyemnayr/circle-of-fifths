@@ -6,9 +6,9 @@ import { option_settings } from "@/data/data";
 
 export async function GET(
   _request: Request,
-  { params }: { params: { feature: KnownKey } }
+  { params }: { params: Promise<{ feature: KnownKey }> }
 ) {
-  const { feature } = params;
+  const { feature } = await params;
   const option = option_settings.find((option) => option.key === feature);
 
   if (!option) {

@@ -106,7 +106,7 @@ export default function Home() {
             color="success"
             onClick={() =>
               signIn("spotify", {
-                redirectTo: "/api/nextauth/callback/spotify",
+                // redirectTo: "/api/nextauth/callback/spotify",
               })
             }
           >

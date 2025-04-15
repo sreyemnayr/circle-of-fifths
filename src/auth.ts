@@ -25,19 +25,20 @@ const authConfig: NextAuthConfig = {
 
   session: {
     maxAge: 60 * 60, // 1hr
+    strategy: "jwt",
   },
 
-  cookies: {
-    pkceCodeVerifier: {
-      name: "authjs.pkce.code_verifier",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
-    },
-  },
+  // cookies: {
+  //   pkceCodeVerifier: {
+  //     name: "authjs.pkce.code_verifier",
+  //     options: {
+  //       httpOnly: true,
+  //       sameSite: "lax",
+  //       path: "/",
+  //       secure: true,
+  //     },
+  //   },
+  // },
 
   callbacks: {
     async jwt({ token, account }: { token: JWT; account: Account | null }) {
@@ -64,17 +65,22 @@ const authConfig: NextAuthConfig = {
     },
     async session({ session, token }: { session: any; token: any }) {
       const user: AuthUser = {
-        ...session.user,
-        access_token: token.access_token,
-        token_type: token.token_type,
-        expires_at: token.expires_at,
-        expires_in: token.expires_in,
-        refresh_token: token.refresh_token,
-        scope: token.scope,
-        id: token.id,
+        ...session?.user,
+        access_token: token?.access_token,
+        token_type: token?.token_type,
+        expires_at: token?.expires_at,
+        expires_in: token?.expires_in,
+        refresh_token: token?.refresh_token,
+        scope: token?.scope,
+        id: token?.id,
       };
+      // async session({ session, user }) {
+      //   session.user = user;
+      //   const account = await authConfig.adapter?.getUser
+      //   // session.error = token?.error;
+      //   return session;
+      // },
       session.user = user;
-      session.error = token.error;
       return session;
     },
   },

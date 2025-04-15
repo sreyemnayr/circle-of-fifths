@@ -20,6 +20,8 @@ import {
 import sdk from "@/lib/spotify-sdk/ClientInstance";
 import { RateLimit } from "async-sema";
 import { upOneFifth } from "./keys";
+import { PlaylistArtProps } from "@/components/PlaylistArt";
+import { P5CanvasInstance } from "@p5-wrapper/react";
 
 /**
  * Wraps a function with a rate limiter
@@ -137,11 +139,13 @@ export const makePlaylist = async (
   user_id: string,
   tracks: PlaylistedTrack<TrackItemWithAudioFeatures>[],
   name: string = "Circle of Fifths",
-  rate_limiter: (() => Promise<void>) | undefined = undefined
+  rate_limiter: (() => Promise<void>) | undefined = undefined,
+  p5Ref: P5CanvasInstance<PlaylistArtProps> | null = null
 ) => {
   if (!rate_limiter) {
     rate_limiter = RateLimit(20, { timeUnit: 10000 });
   }
+  console.log(p5Ref);
   const playlist: Playlist<TrackItem> = await doWithRateLimiter(
     rate_limiter,
     (user_id: string, request: CreatePlaylistRequest) =>
@@ -164,6 +168,25 @@ export const makePlaylist = async (
       )
     );
   }
+
+  // if (p5Ref) {
+  //   const dataUrl = p5Ref.drawingContext.canvas.toDataURL("image/jpeg", 0.6);
+  //   console.log(dataUrl);
+  //   try {
+  //     console.log("Uploading image");
+  //     await doWithRateLimiter(
+  //       rate_limiter,
+  //       (params: string) =>
+  //         sdk.playlists.addCustomPlaylistCoverImageFromBase64String(
+  //           playlist.id,
+  //           params.replace("data:image/jpeg;base64,", "")
+  //         ),
+  //       [dataUrl]
+  //     );
+  //   } catch (e: any) {
+  //     console.log(e);
+  //   }
+  // }
 
   // const results = await Promise.allSettled(promises)
   return results;
@@ -371,7 +394,7 @@ export const searchTracks = async (
   const results: Required<Pick<PartialSearchResult, "tracks">> =
     await doWithRateLimiter(
       rate_limiter,
-      (q: string, types: ItemTypes[]) => sdk.search(q, types),
+      (q: string, types: ItemTypes[]) => sdk.search(q, types, "US", 25),
       [query, ["track"]]
     );
   const playlistTracks = results.tracks.items.map((track) => {

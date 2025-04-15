@@ -42,6 +42,9 @@ import { app_settings } from "@/data/data";
 import { TrackChoice } from "./ExampleTrack";
 import Card from "@mui/material/Card";
 
+import PlaylistArt, { PlaylistArtProps } from "./PlaylistArt";
+import { P5CanvasInstance } from "@p5-wrapper/react";
+
 const rate_limiter = RateLimit(20, { timeUnit: 10000 });
 
 export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
@@ -71,6 +74,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [filterEmoji, setFilterEmoji] = useState<string>("");
 
   const [requeryPlaylists, setRequeryPlaylists] = useState<number>(1);
+
+  const [p5, setP5] = useState<P5CanvasInstance<PlaylistArtProps> | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -112,7 +117,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
       try {
         const new_filters = {
           ...filters,
-          limit: 25,
+          limit: 50,
           seed_genres: ["pop", "rock", "country", "acoustic", "r-n-b"],
         };
         const results = await getRecommendedTracks(new_filters, rate_limiter);
@@ -375,23 +380,21 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             <Paper
               variant="outlined"
               sx={{
-                display: "flex",
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
                 padding: "10px",
                 width: "100%",
                 flexWrap: "wrap",
+                gap: "4px",
               }}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-2"
             >
               {(selectedPlaylistTracks && selectedPlaylistTracks.length > 0
                 ? selectedPlaylistTracks
                 : filterTracks || []
-              ).map((track) =>
+              ).map((track, idx) =>
                 isTrack(track.track) ? (
                   <Card
-                    className="m-1 border-1 border-transparent hover:border-green-500 transition-colors duration-300 hover:cursor-pointer"
-                    key={track.track.id}
+                    className="border-1 border-transparent hover:border-green-500 transition-colors duration-300 hover:cursor-pointer m-1"
+                    key={`PlaylistTracks-${track.track.id}-${idx}`}
                     onClick={() => {
                       setSelectedTrack(track);
                       setIndex(3);
@@ -473,6 +476,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   ))}
               </tbody>
             </table> */}
+            {filterTracks.length > 0 && (
+              <PlaylistArt tracks={filterTracks} setRef={setP5} />
+            )}
+            {selectedPlaylistTracks.length > 0 && (
+              <PlaylistArt tracks={selectedPlaylistTracks} setRef={setP5} />
+            )}
           </Paper>
         </TabPanel>
         <TabPanel value={3}>
@@ -500,7 +509,9 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   newPlaylistTracks,
                   `C5 #${
                     playlists.filter((p) => p.name.includes("C5")).length + 1
-                  } - ${newPlaylistTracks?.[0]?.track?.name} - ${filterEmoji}`
+                  } - ${newPlaylistTracks?.[0]?.track?.name} - ${filterEmoji}`,
+                  rate_limiter,
+                  p5
                 );
                 setNewPlaylistTracks([]);
 
@@ -514,6 +525,9 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             >
               {loading ? loading : "Save Playlist"}
             </Button>
+            {newPlaylistTracks.length > 0 && (
+              <PlaylistArt tracks={newPlaylistTracks} setRef={setP5} />
+            )}
             {newPlaylistTracks.map((track) =>
               isTrack(track.track) ? (
                 <Card

@@ -70,6 +70,7 @@ const scopes = [
   "playlist-modify-public",
   "playlist-modify-private",
   "streaming",
+  // "ugc-image-upload",
 ];
 
 authURL.searchParams.append("scope", scopes.join(" "));

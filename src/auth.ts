@@ -1,7 +1,10 @@
 import NextAuth, { NextAuthConfig, Account } from "next-auth";
-
+import { MongoDBAdapter } from "@auth/mongodb-adapter";
 import spotifyProfile, { refreshAccessToken } from "@/SpotifyProfile";
 import { JWT } from "next-auth/jwt";
+import clientPromise from "@/lib/mongodb";
+
+const client = await clientPromise;
 
 export type AuthUser = {
   name: string;
@@ -17,6 +20,7 @@ export type AuthUser = {
 };
 
 const authConfig: NextAuthConfig = {
+  adapter: MongoDBAdapter(client),
   providers: [spotifyProfile],
 
   session: {
@@ -52,7 +56,7 @@ const authConfig: NextAuthConfig = {
         id: account?.providerAccountId,
       };
 
-      if (Date.now() < updatedToken.expires_at) {
+      if (Date.now() / 1000 - 60 * 30 >= updatedToken.expires_at) {
         return refreshAccessToken(updatedToken);
       }
 

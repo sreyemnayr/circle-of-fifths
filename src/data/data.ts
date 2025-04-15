@@ -8,7 +8,7 @@ import {
 export const app_settings: AppSettings = {
   allow_explicit: true,
   max_tracks: 200,
-  min_time: 1000 * 60 * 60 * 6, // 6 hours
+  min_time: 1000 * 60 * 60 * 2.5, // 2.5 hours
 };
 
 export const option_settings: OptionSettings[] = [

@@ -104,7 +104,12 @@ export default function Home() {
           <Button
             variant="contained"
             color="success"
-            onClick={() => signIn("spotify")}
+            onClick={() =>
+              signIn("spotify", {
+                callbackUrl: "/api/auth/callback/spotify",
+                redirect: true,
+              })
+            }
           >
             Authenticate with Spotify
           </Button>

@@ -2,6 +2,7 @@
 
 import type { Session } from "next-auth";
 import { SessionProvider } from "next-auth/react";
+import { SettingsProvider } from "@/providers/useSettings";
 import React from "react";
 import CssBaseline from "@mui/material/CssBaseline";
 //import getInitColorSchemeScript from "@mui/system/cssVars/getInitColorSchemeScript";
@@ -58,7 +59,7 @@ function AuthSessionProvider({
         baseUrl={baseUrl}
         basePath={`/api/nextauth`}
       >
-        {children}
+        <SettingsProvider>{children}</SettingsProvider>
       </SessionProvider>
     </>
   );

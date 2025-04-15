@@ -49,7 +49,7 @@ const sketch: Sketch<PlaylistArtProps> = (p5) => {
     const B = 90;
     const S = 85;
     const layers = Math.floor(track_images.length / 12);
-    const layer_size = Math.floor(640 / 3.9 / layers);
+    const layer_size = Math.floor(640 / 2 / layers);
     const CIRCLE_SIZE = Math.floor(layer_size * 0.85);
     p5.background("black");
 
@@ -328,7 +328,7 @@ export default function PlaylistArt({
   return (
     <NextReactP5Wrapper
       sketch={sketch}
-      tracks={tracks}
+      tracks={tracks.slice(0, 60)}
       style={{ width: "100px", height: "100px" }}
       setRef={setRef}
     />

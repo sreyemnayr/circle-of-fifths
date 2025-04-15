@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.8.0",
+    "@base-ui-components/react": "^1.0.0-alpha.7",
     "@mui/lab": "^7.0.0-beta.10",
     "@mui/material": "^7.0.1",
     "@p5-wrapper/react": "^5.0.0-rc.2",

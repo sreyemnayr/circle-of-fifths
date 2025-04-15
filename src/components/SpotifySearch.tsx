@@ -19,6 +19,12 @@ import {
   isTrack,
 } from "@/util/spotify";
 
+import {
+  UnfoldHorizontalIcon as CursorGrowIcon,
+  MinusIcon,
+  PlusIcon,
+} from "lucide-react";
+
 import { useCallback, useEffect, useState } from "react";
 import { OptionsSliders } from "@/components/OptionsSliders";
 // import { NewOptionsSliders } from "@/components/NewOptionsSliders";
@@ -35,15 +41,18 @@ import Tab from "@mui/material/Tab";
 import TabPanel from "@mui/lab/TabPanel";
 import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
+import { NumberField } from "@base-ui-components/react";
 
 import { msToTime } from "@/util/time";
 import { getNextTracks, chooseStartingFive } from "@/util/playlister";
-import { app_settings } from "@/data/data";
+// import { app_settings } from "@/data/data";
+import { useSettings } from "@/providers/useSettings";
 import { TrackChoice } from "./ExampleTrack";
 import Card from "@mui/material/Card";
 
 import PlaylistArt, { PlaylistArtProps } from "./PlaylistArt";
 import { P5CanvasInstance } from "@p5-wrapper/react";
+import Switch from "@mui/material/Switch";
 
 const rate_limiter = RateLimit(20, { timeUnit: 10000 });
 
@@ -76,6 +85,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [requeryPlaylists, setRequeryPlaylists] = useState<number>(1);
 
   const [p5, setP5] = useState<P5CanvasInstance<PlaylistArtProps> | null>(null);
+
+  const { settings: app_settings, updateSettings } = useSettings();
 
   useEffect(() => {
     (async () => {
@@ -163,7 +174,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         _setWarning(e.message);
       }
     })();
-  }, [newPlaylistTracks, filters]);
+  }, [
+    newPlaylistTracks,
+    filters,
+    app_settings.max_tracks,
+    app_settings.min_time,
+  ]);
 
   useEffect(() => {
     try {
@@ -269,6 +285,206 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
           <Paper>
             {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
+            {
+              <Card className="flex flex-row justify-around">
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Switch
+                    checked={app_settings.allow_explicit}
+                    onChange={(e) =>
+                      updateSettings({ allow_explicit: e.target.checked })
+                    }
+                  />
+                  <span>Allow explicit content?</span>
+                </div>
+                <div>
+                  {/*
+                  .Field {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 0.25rem;
+}
+
+.ScrubArea {
+  cursor: ew-resize;
+  font-weight: bold;
+  user-select: none;
+}
+
+.ScrubAreaCursor {
+  filter: drop-shadow(0 1px 1px #0008);
+}
+
+.Label {
+  cursor: ew-resize;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--color-gray-900);
+}
+
+.Group {
+  display: flex;
+}
+
+.Input {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--color-gray-200);
+  border-bottom: 1px solid var(--color-gray-200);
+  border-left: none;
+  border-right: none;
+  width: 6rem;
+  height: 2.5rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: normal;
+  background-color: transparent;
+  color: var(--color-gray-900);
+
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+
+  &:focus {
+    z-index: 1;
+    outline: 2px solid var(--color-blue);
+    outline-offset: -1px;
+  }
+}
+
+.Decrement,
+.Increment {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0;
+  outline: 0;
+  padding: 0;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 0.375rem;
+  background-color: var(--color-gray-50);
+  background-clip: padding-box;
+  color: var(--color-gray-900);
+  user-select: none;
+
+  @media (hover: hover) {
+    &:hover {
+      background-color: var(--color-gray-100);
+    }
+  }
+
+  &:active {
+    background-color: var(--color-gray-100);
+  }
+}
+
+.Decrement {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.Increment {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+                  */}
+                  <NumberField.Root
+                    id="max_tracks"
+                    value={app_settings.max_tracks}
+                    className={`flex flex-col items-center gap-2`}
+                    onValueChange={(v) =>
+                      updateSettings({ max_tracks: v || undefined })
+                    }
+                    min={1}
+                    max={200}
+                  >
+                    <NumberField.ScrubArea
+                      className={`cursor-ew-resize font-bold user-select-none`}
+                    >
+                      <label
+                        htmlFor="max_tracks"
+                        className={`cursor-ew-resize font-size-0.875rem line-height-1.25rem font-weight-500 color-var(--color-gray-900)`}
+                      >
+                        Maximum number of tracks
+                      </label>
+                      <NumberField.ScrubAreaCursor
+                        className={`filter-drop-shadow-0-1px-1px-0008`}
+                      >
+                        <CursorGrowIcon />
+                      </NumberField.ScrubAreaCursor>
+
+                      <NumberField.Group className={`flex`}>
+                        <NumberField.Decrement
+                          className={`box-sizing-border-box display-flex align-items-center justify-content-center width-2.5rem height-2.5rem margin-0 outline-0 padding-0 border-1 border-var(--color-gray-200) border-radius-0.375rem background-color-var(--color-gray-50) background-clip-padding-box color-var(--color-gray-900) user-select-none`}
+                        >
+                          <MinusIcon />
+                        </NumberField.Decrement>
+                        <NumberField.Input
+                          className={`box-sizing-border-box m-0 p-0 border-top-1 border-bottom-1 border-left-none border-right-none height-2.5rem font-family-inherit font-size-1rem font-weight-normal background-color-transparent text-gray-900 text-center font-variant-numeric-tabular-nums`}
+                        />
+                        <NumberField.Increment
+                          className={`box-sizing-border-box display-flex align-items-center justify-content-center width-2.5rem height-2.5rem margin-0 outline-0 padding-0 border-1 border-var(--color-gray-200) border-radius-0.375rem background-color-var(--color-gray-50) background-clip-padding-box color-var(--color-gray-900) user-select-none`}
+                        >
+                          <PlusIcon />
+                        </NumberField.Increment>
+                      </NumberField.Group>
+                    </NumberField.ScrubArea>
+                  </NumberField.Root>
+                </div>
+                <div>
+                  <NumberField.Root
+                    id="min_time"
+                    value={app_settings.min_time}
+                    onValueChange={(v) =>
+                      updateSettings({ min_time: v || undefined })
+                    }
+                    step={1000 * 60}
+                    smallStep={1000 * 60}
+                    largeStep={1000 * 60 * 10}
+                    min={1000 * 60 * 5}
+                    max={1000 * 60 * 60 * 12}
+                  >
+                    <NumberField.ScrubArea
+                      className={`cursor-ew-resize font-bold user-select-none`}
+                    >
+                      <label
+                        htmlFor="min_time"
+                        className={`cursor-ew-resize font-size-0.875rem line-height-1.25rem font-weight-500 color-var(--color-gray-900)`}
+                      >
+                        Minimum time
+                      </label>
+                      <NumberField.ScrubAreaCursor
+                        className={`filter-drop-shadow-0-1px-1px-0008`}
+                      >
+                        <CursorGrowIcon />
+                      </NumberField.ScrubAreaCursor>
+
+                      <NumberField.Group className={`flex`}>
+                        <NumberField.Decrement
+                          className={`box-sizing-border-box display-flex align-items-center justify-content-center width-2.5rem height-2.5rem margin-0 outline-0 padding-0 border-1 border-var(--color-gray-200) border-radius-0.375rem background-color-var(--color-gray-50) background-clip-padding-box color-var(--color-gray-900) user-select-none`}
+                        >
+                          <MinusIcon />
+                        </NumberField.Decrement>
+                        <NumberField.Input className={`hidden`} />
+                        <input
+                          className={`box-sizing-border-box m-0 p-0 border-top-1 border-bottom-1 border-left-none border-right-none height-2.5rem font-family-inherit font-size-1rem font-weight-normal background-color-transparent text-gray-900 text-center font-variant-numeric-tabular-nums min-w-10`}
+                          value={msToTime(app_settings.min_time)}
+                        />
+                        <NumberField.Increment
+                          className={`box-sizing-border-box display-flex align-items-center justify-content-center width-2.5rem height-2.5rem margin-0 outline-0 padding-0 border-1 border-var(--color-gray-200) border-radius-0.375rem background-color-var(--color-gray-50) background-clip-padding-box color-var(--color-gray-900) user-select-none`}
+                        >
+                          <PlusIcon />
+                        </NumberField.Increment>
+                      </NumberField.Group>
+                    </NumberField.ScrubArea>
+                  </NumberField.Root>
+                </div>
+              </Card>
+            }
             <OptionsSliders
               ignore={["key", "mode"]}
               setFilters={setFilters}
@@ -396,6 +612,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                     className="border-1 border-transparent hover:border-green-500 transition-colors duration-300 hover:cursor-pointer m-1"
                     key={`PlaylistTracks-${track.track.id}-${idx}`}
                     onClick={() => {
+                      setLoading("");
+                      setNewPlaylistTracks([]);
                       setSelectedTrack(track);
                       setIndex(3);
                     }}
@@ -513,7 +731,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   rate_limiter,
                   p5
                 );
-                setNewPlaylistTracks([]);
+                // setNewPlaylistTracks([]);
 
                 setLoading(
                   `Saved C5 #${

@@ -743,7 +743,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             >
               {loading ? loading : "Save Playlist"}
             </Button>
-            {newPlaylistTracks.length > 0 && (
+            {newPlaylistTracks.length > 0 && loading.includes("Saved") && (
               <PlaylistArt tracks={newPlaylistTracks} setRef={setP5} />
             )}
             {newPlaylistTracks.map((track) =>

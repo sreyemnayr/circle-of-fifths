@@ -11,6 +11,7 @@ import { option_settings } from "@/data/data";
 import { isTrack } from "@/util/spotify";
 import { keyString } from "@/util/keys";
 import { Dispatch, SetStateAction } from "react";
+import { Button } from "@mui/material";
 
 export const ExampleTrack = ({
   artist,
@@ -118,7 +119,7 @@ export const TrackInfo = ({
   setActiveOption: Dispatch<SetStateAction<OptionSettings | null>>;
 }) => {
   return isTrack(track.track) ? (
-    <div className="flex flex-col items-between relative h-full w-full min-h-[90px]">
+    <div className="flex flex-col items-between relative h-full w-3/4 min-h-[120px]">
       <div className="absolute top-1 right-1 opacity-90 z-10 hover:scale-125 hover:opacity-100 transition-all duration-300">
         <a href={track?.track?.external_urls?.spotify} target="_blank">
           <img
@@ -129,18 +130,6 @@ export const TrackInfo = ({
         </a>
       </div>
       <div className="flex flex-row items-center mt-2 ml-2 mr-2 absolute top-0 left-0 right-0 ">
-        <div className="">
-          {track?.track?.features?.key !== null ? (
-            <div className="text-xl font-bold text-green-200 w-10">
-              {keyString(
-                track?.track?.features?.key || 0,
-                track?.track?.features?.mode || 0
-              )}
-            </div>
-          ) : (
-            <></>
-          )}
-        </div>
         {track.track.album?.images?.length > 0 && (
           <img
             src={
@@ -160,21 +149,26 @@ export const TrackInfo = ({
       </div>
       <div className="text-xs m-0 bg-gray-100 p-1 w-full flex flex-row items-center justify-between absolute bottom-0 left-0 right-0">
         Chosen Track Vibes:
-        {Object.keys(track.track.features || {}).map((feature) => (
-          <div
-            key={`${track.track.id}-${feature}`}
-            onClick={() =>
-              setActiveOption(
-                options.find((o) => o.key === feature) as OptionSettings
-              )
-            }
-          >
-            {displayOption(
-              options.find((o) => o.key === feature) as OptionSettings,
-              track.track.features?.[feature as KnownKey] || 0
-            )}
-          </div>
-        ))}
+        {Object.keys(track.track.features || {})
+          .filter((feature) => {
+            const option = options.find((o) => o.key === feature);
+            return option && option.key !== "mode" && option.key !== "key";
+          })
+          .map((feature) => (
+            <Button
+              key={`${track.track.id}-${feature}`}
+              onClick={() =>
+                setActiveOption(
+                  options.find((o) => o.key === feature) as OptionSettings
+                )
+              }
+            >
+              {displayOption(
+                options.find((o) => o.key === feature) as OptionSettings,
+                track.track.features?.[feature as KnownKey] || 0
+              )}
+            </Button>
+          ))}
       </div>
     </div>
   ) : (

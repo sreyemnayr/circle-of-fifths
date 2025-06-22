@@ -298,7 +298,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           <Tab label="Refine Vibes" />
           <Tab label="Generate Playlist" />
         </TabList>
-        <TabPanel value={3} style={{ width: "100%", height: "100%" }}>
+        <TabPanel value={2} style={{ width: "100%", height: "100%" }}>
           <Paper>
             {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
             {
@@ -513,9 +513,9 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   onClick={() => {
                     if (selectedTrack) {
                       setGeneratePlaylist(true);
-                      setIndex(4);
+                      setIndex(3);
                     } else {
-                      setIndex(2);
+                      setIndex(1);
                     }
                   }}
                 >
@@ -537,7 +537,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           </Paper>
         </TabPanel>
 
-        <TabPanel value={1} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={0} style={{ width: "80%", height: "100%" }}>
           <Paper>
             <div style={{ color: "#fff", width: "100%", height: "100%" }}>
               {loading}
@@ -558,7 +558,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                     key={playlist.id}
                     onClick={() => {
                       setSelectedPlaylist(playlist);
-                      setIndex(2);
+                      setIndex(1);
                     }}
                   >
                     <td>{selectedPlaylist?.id == playlist.id ? "✅" : ""}</td>
@@ -582,7 +582,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             </table>
           </Paper>
         </TabPanel>
-        <TabPanel value={2} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={1} style={{ width: "80%", height: "100%" }}>
           <Paper>
             <div
               style={{
@@ -644,7 +644,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                       setLoading("");
                       setNewPlaylistTracks([]);
                       setSelectedTrack(track);
-                      setIndex(3);
+                      setIndex(2);
                     }}
                   >
                     <TrackChoice track={track} />
@@ -731,7 +731,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )} */}
           </Paper>
         </TabPanel>
-        <TabPanel value={4} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={3} style={{ width: "80%", height: "100%" }}>
           <Paper sx={{ width: "100%", height: "100%" }}>
             <h2 style={{ width: "100%" }}>
               {newPlaylistTracks.length} Tracks |{" "}
@@ -782,7 +782,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 setNewPlaylistTracks([]);
                 setFilterTracks([]);
                 setFilterEmoji("");
-                setIndex(2);
+                setIndex(1);
               }}
             >
               Start Over

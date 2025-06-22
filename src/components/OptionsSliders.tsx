@@ -43,7 +43,7 @@ import Typography from "@mui/material/Typography";
 import { styled } from "@mui/material/styles";
 
 import { msToMinutes } from "@/util/time";
-import { ExampleTrack } from "./ExampleTrack";
+import { ExampleTrack, TrackInfo } from "./ExampleTrack";
 import { displayOption } from "@/util/options";
 import { findRepresentativeTracks, isTrack } from "@/util/spotify";
 import Paper from "@mui/material/Paper";
@@ -440,7 +440,7 @@ export const OptionsSliders = ({
       if (sampleTracks.length > 0) {
         setMarks(
           sampleTracks
-            .sort((a, b) => (b.highlight ? 1 : 0) - (a.highlight ? 1 : 0))
+            .sort((a, b) => (b.highlight ? 0 : 1) - (a.highlight ? 0 : 1))
             .map(
               (example) =>
                 ({
@@ -607,6 +607,14 @@ export const OptionsSliders = ({
         </FormControl>
         {filterEmoji !== "" && <>{letsGoButton}</>}
       </Card>
+
+      {sampleTrack && (
+        <TrackInfo
+          track={sampleTrack}
+          options={options}
+          setActiveOption={setActiveOption}
+        />
+      )}
 
       {activeOption && (
         <Card

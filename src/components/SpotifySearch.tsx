@@ -79,6 +79,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   } as RecommendationsRequest);
   const [warning, _setWarning] = useState<string>("");
 
+  const [generatePlaylist, setGeneratePlaylist] = useState<boolean>(false);
+
   const [newPlaylistTracks, setNewPlaylistTracks] = useState<
     PlaylistedTrack<TrackItemWithAudioFeatures>[]
   >([]);
@@ -111,7 +113,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   useEffect(() => {
     (async () => {
       try {
-        if (selectedTrack) {
+        if (selectedTrack && generatePlaylist) {
           setNewPlaylistTracks(
             chooseStartingFive(
               selectedPlaylist ? selectedPlaylistTracks : [selectedTrack],
@@ -123,7 +125,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         _setWarning(e.message);
       }
     })();
-  }, [selectedTrack, selectedPlaylist, selectedPlaylistTracks]);
+  }, [
+    selectedTrack,
+    selectedPlaylist,
+    selectedPlaylistTracks,
+    generatePlaylist,
+  ]);
 
   const refreshFilteredTracks = useCallback(() => {
     setFilterTracks([]);
@@ -254,7 +261,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           onChange={(_event, value) => setIndex(value as number)}
           style={{ alignItems: "center" }}
         >
-          <Tab
+          {/* <Tab
             label={
               <>
                 Vibes{" "}
@@ -284,14 +291,14 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 )}
               </>
             }
-          />
+          /> */}
 
           <Tab label="My Playlists" />
           <Tab label="Search Tracks" />
           <Tab label="Refine Vibes" />
           <Tab label="Generate Playlist" />
         </TabList>
-        <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
+        <TabPanel value={3} style={{ width: "100%", height: "100%" }}>
           <Paper>
             {/* <textarea readOnly cols={30} rows={10} value={JSON.stringify(filters, null, 2)} /> */}
             {
@@ -504,7 +511,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 <Button
                   variant="contained"
                   onClick={() => {
-                    setIndex(2);
+                    if (selectedTrack) {
+                      setGeneratePlaylist(true);
+                      setIndex(4);
+                    } else {
+                      setIndex(2);
+                    }
                   }}
                 >
                   Let&apos;s go
@@ -719,7 +731,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )} */}
           </Paper>
         </TabPanel>
-        <TabPanel value={3} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={4} style={{ width: "80%", height: "100%" }}>
           <Paper sx={{ width: "100%", height: "100%" }}>
             <h2 style={{ width: "100%" }}>
               {newPlaylistTracks.length} Tracks |{" "}
@@ -759,6 +771,21 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               }}
             >
               {loading ? loading : "Save Playlist"}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={() => {
+                setGeneratePlaylist(false);
+                setSelectedTrack(null);
+                setSelectedPlaylist(null);
+                setSelectedPlaylistTracks([]);
+                setNewPlaylistTracks([]);
+                setFilterTracks([]);
+                setFilterEmoji("");
+                setIndex(2);
+              }}
+            >
+              Start Over
             </Button>
             {newPlaylistTracks.length > 0 && loading.includes("Saved") && (
               <PlaylistArt tracks={newPlaylistTracks} setRef={setP5} />

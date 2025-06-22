@@ -439,25 +439,27 @@ export const OptionsSliders = ({
     if (activeOption) {
       if (sampleTracks.length > 0) {
         setMarks(
-          sampleTracks.map(
-            (example) =>
-              ({
-                key: `${activeOption.key}-${example.name}`,
-                value: example.value,
-                label: (
-                  <ExampleTrack
-                    key={`${activeOption.key}-${example.name}`}
-                    artist={example.artist}
-                    name={example.name}
-                    highlight={example?.highlight ?? false}
-                    img={example.img}
-                    value={
-                      displayOption(activeOption, Number(example.value)) ?? ""
-                    }
-                  />
-                ),
-              } as Mark)
-          )
+          sampleTracks
+            .sort((a, b) => (b.highlight ? 1 : 0) - (a.highlight ? 1 : 0))
+            .map(
+              (example) =>
+                ({
+                  key: `${activeOption.key}-${example.name}`,
+                  value: example.value,
+                  label: (
+                    <ExampleTrack
+                      key={`${activeOption.key}-${example.name}`}
+                      artist={example.artist}
+                      name={example.name}
+                      highlight={example?.highlight ?? false}
+                      img={example.img}
+                      value={
+                        displayOption(activeOption, Number(example.value)) ?? ""
+                      }
+                    />
+                  ),
+                } as Mark)
+            )
         );
       } else if (activeOption.key === "key") {
         setMarks(
@@ -717,7 +719,7 @@ export const OptionsSliders = ({
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Typography>OFF</Typography>
                 <AntSwitch
-                  checked={!activeOption?.enabled}
+                  checked={activeOption?.enabled}
                   onChange={(e) =>
                     setOptions((cur) => {
                       const updateOption = cur.find(

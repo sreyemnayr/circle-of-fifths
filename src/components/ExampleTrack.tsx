@@ -21,12 +21,10 @@ export const ExampleTrack = ({
   return (
     <div
       className={`flex flex-row items-center ${
-        highlight ? "bg-blue-200 z-50" : ""
+        highlight ? "bg-blue-200 z-50 pr-10" : ""
       }`}
     >
-      <div className={`text-xs mr-2.5 ${highlight ? "font-bold" : ""}`}>
-        {value}
-      </div>
+      <div className={`text-xs mr-2.5`}>{value}</div>
       <img src={img} className="h-[30px] mr-2.5" alt="" />
       <div className="flex flex-col items-start">
         <div>{name}</div>

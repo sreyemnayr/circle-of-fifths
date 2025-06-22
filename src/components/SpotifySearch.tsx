@@ -720,7 +720,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           </Paper>
         </TabPanel>
         <TabPanel value={3}>
-          <Paper>
+          <Paper sx={{ width: "100%", height: "100%" }}>
             <h2>
               {newPlaylistTracks.length} Tracks |{" "}
               {msToTime(

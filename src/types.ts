@@ -70,6 +70,7 @@ export interface IExampleTrack {
   name: string;
   img: string;
   value: number | string;
+  highlight?: boolean;
 }
 
 export type ExampleTracks = {

@@ -247,6 +247,7 @@ export const findRepresentativeTrack = async (
 
 export const findRepresentativeTracks = async (
   option: OptionSettings,
+  sampleTrack: PlaylistedTrack<TrackItemWithAudioFeatures> | null = null,
   rate_limiter: (() => Promise<void>) | undefined = undefined
 ) => {
   if (option.key === "popularity") {
@@ -274,7 +275,15 @@ export const findRepresentativeTracks = async (
   for (let i = 0; i < mins.length; i++) {
     const min = mins[i] || 0;
     const max = maxes[i] || 1;
-    if (!tracks[i]) {
+
+    if (
+      sampleTrack &&
+      sampleTrack.track.features?.[option.key as KnownKey] &&
+      sampleTrack.track.features?.[option.key as KnownKey] >= min &&
+      sampleTrack.track.features?.[option.key as KnownKey] <= max
+    ) {
+      tracks[i] = sampleTrack;
+    } else if (!tracks[i]) {
       const track = await findRepresentativeTrack(
         option.key,
         option.integer ? Math.round(min) : min,
@@ -293,6 +302,7 @@ export const findRepresentativeTracks = async (
     name: track.track.name,
     artist: "album" in track.track ? track.track.album.artists[0]?.name : "",
     img: "album" in track.track ? track.track.album.images[0]?.url : "",
+    highlight: sampleTrack?.track?.id === track.track.id,
   })) as IExampleTrack[];
 
   return exampleTracks;

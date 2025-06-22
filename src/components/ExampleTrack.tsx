@@ -11,10 +11,20 @@ import { option_settings } from "@/data/data";
 import { isTrack } from "@/util/spotify";
 import { keyString } from "@/util/keys";
 
-export const ExampleTrack = ({ artist, name, img, value }: IExampleTrack) => {
+export const ExampleTrack = ({
+  artist,
+  name,
+  img,
+  value,
+  highlight = false,
+}: IExampleTrack) => {
   return (
-    <div className="flex flex-row items-center">
-      <div className="text-xs mr-2.5">{value}</div>
+    <div
+      className={`flex flex-row items-center ${highlight ? "bg-blue-200" : ""}`}
+    >
+      <div className={`text-xs mr-2.5 ${highlight ? "font-bold" : ""}`}>
+        {value}
+      </div>
       <img src={img} className="h-[30px] mr-2.5" alt="" />
       <div className="flex flex-col items-start">
         <div>{name}</div>

@@ -418,12 +418,12 @@ export const OptionsSliders = ({
     );
     if (sampleTracksLoading && activeOption) {
       (async () => {
-        const tracks = await findRepresentativeTracks(activeOption);
+        const tracks = await findRepresentativeTracks(
+          activeOption,
+          sampleTrack
+        );
         console.log("representative tracks", tracks);
-        setSampleTracks([
-          ...trackToExampleTracks(sampleTrack, activeOption),
-          ...tracks,
-        ]);
+        setSampleTracks(tracks);
         setSampleTracksLoading(false);
       })();
     }

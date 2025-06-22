@@ -14,6 +14,8 @@ import {
   MinKey,
   MaxKey,
   PopularityKey,
+  Mark,
+  TrackItemWithAudioFeatures,
 } from "@/types";
 
 import { option_settings, recommendationPresets } from "@/data/data";
@@ -26,7 +28,10 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { RecommendationsRequest } from "@spotify/web-api-ts-sdk";
+import {
+  PlaylistedTrack,
+  RecommendationsRequest,
+} from "@spotify/web-api-ts-sdk";
 import { keyString } from "@/util/keys";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -40,11 +45,10 @@ import { styled } from "@mui/material/styles";
 import { msToMinutes } from "@/util/time";
 import { ExampleTrack } from "./ExampleTrack";
 import { displayOption } from "@/util/options";
-import { findRepresentativeTracks } from "@/util/spotify";
+import { findRepresentativeTracks, isTrack } from "@/util/spotify";
 import Paper from "@mui/material/Paper";
 import Card from "@mui/material/Card";
 
-import { Mark } from "@/types";
 import InputLabel from "@mui/material/InputLabel";
 
 const AntSwitch = styled(Switch)(({ theme }) => ({
@@ -277,18 +281,38 @@ export const RangeSlider = ({
   );
 };
 
+const trackToExampleTracks = (
+  track: PlaylistedTrack<TrackItemWithAudioFeatures> | null | undefined,
+  option: OptionSettings | undefined
+) => {
+  if (track && option && isTrack(track.track)) {
+    return [
+      {
+        value: track.track.features?.[option.key as KnownKey],
+        name: track.track.name,
+        artist:
+          "album" in track.track ? track.track.album.artists[0]?.name : "",
+        img: "album" in track.track ? track.track.album.images[0]?.url : "",
+      },
+    ] as IExampleTrack[];
+  }
+  return [];
+};
+
 export const OptionsSliders = ({
   ignore = [],
   setFilters,
   setFilterEmoji,
   filterEmoji,
   letsGoButton,
+  sampleTrack,
 }: {
   ignore?: (KnownKey | PopularityKey)[];
   setFilters: Dispatch<SetStateAction<RecommendationsRequest>>;
   setFilterEmoji: Dispatch<SetStateAction<string>>;
   filterEmoji: string;
   letsGoButton: React.ReactNode;
+  sampleTrack?: PlaylistedTrack<TrackItemWithAudioFeatures> | null;
 }) => {
   // const [filters, setFilters] = useState<RecommendationsRequest>({limit: 100} as RecommendationsRequest)
   const [options, setOptions] = useState<OptionSettings[]>(option_settings);
@@ -325,8 +349,9 @@ export const OptionsSliders = ({
         cur[max_key] = undefined;
 
         if (
-          option.range[0] !== option.value?.[0] ||
-          option.range[1] !== option.value?.[1]
+          (option.range[0] !== option.value?.[0] ||
+            option.range[1] !== option.value?.[1]) &&
+          option.enabled
         ) {
           if (option.value?.[0] == option.value?.[1] && !option.exact) {
             cur[target_key] = option.integer
@@ -380,10 +405,10 @@ export const OptionsSliders = ({
           label: displayOption(activeOption, q),
         })) ?? []
       );
-      setSampleTracks([]);
+      setSampleTracks(trackToExampleTracks(sampleTrack, activeOption) ?? []);
       setSampleTracksLoading(true);
     }
-  }, [activeOption]);
+  }, [activeOption, sampleTrack]);
 
   useEffect(() => {
     console.log(
@@ -395,11 +420,14 @@ export const OptionsSliders = ({
       (async () => {
         const tracks = await findRepresentativeTracks(activeOption);
         console.log("representative tracks", tracks);
-        setSampleTracks(tracks);
+        setSampleTracks([
+          ...trackToExampleTracks(sampleTrack, activeOption),
+          ...tracks,
+        ]);
         setSampleTracksLoading(false);
       })();
     }
-  }, [sampleTracksLoading, activeOption]);
+  }, [sampleTracksLoading, activeOption, sampleTrack]);
 
   useEffect(() => {
     console.log(
@@ -549,9 +577,11 @@ export const OptionsSliders = ({
                       );
                       option.value = [option.range[0], preset[max_key] || 0];
                     }
+                    option.enabled = true;
                   } else {
                     option.target = true;
                     option.value = [option.range[0], option.range[1]];
+                    option.enabled = false;
                   }
                 }
                 return cur;
@@ -682,6 +712,27 @@ export const OptionsSliders = ({
                   Reset
                 </Button>
               )}
+
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Typography>OFF</Typography>
+                <AntSwitch
+                  checked={!activeOption?.enabled}
+                  disabled={!activeOption?.enabled}
+                  onChange={(e) =>
+                    setOptions((cur) => {
+                      const updateOption = cur.find(
+                        (c) => c.key === activeOption.key
+                      );
+
+                      if (updateOption) {
+                        updateOption.enabled = e.target.checked;
+                      }
+                      return [...cur];
+                    })
+                  }
+                />
+                <Typography>ON</Typography>
+              </Stack>
 
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                 <Typography>Target</Typography>
@@ -949,6 +1000,7 @@ export const OptionsSliders = ({
                 );
 
                 if (updateOption) {
+                  updateOption.enabled = true;
                   updateOption.value = e as [number, number];
                 }
                 return [...cur];

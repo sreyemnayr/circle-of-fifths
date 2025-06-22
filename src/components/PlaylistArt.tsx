@@ -16,7 +16,9 @@ const sketch: Sketch<PlaylistArtProps> = (p5) => {
     const container = document.getElementById("playlist-art-container");
     const rect = container?.getBoundingClientRect();
 
-    p5.createCanvas(rect?.width ?? 640, rect?.height ?? 640, p5.P2D);
+    const side_length = rect?.width ?? 640;
+
+    p5.createCanvas(side_length, side_length, p5.P2D);
     p5.noStroke();
 
     p5.colorMode(p5.HSB, 360, 100, 100, 100);
@@ -49,10 +51,11 @@ const sketch: Sketch<PlaylistArtProps> = (p5) => {
   };
 
   p5.draw = () => {
+    const w = p5.width;
     const B = 90;
     const S = 85;
     const layers = Math.floor(track_images.length / 12);
-    const layer_size = Math.floor(640 / 2 / layers);
+    const layer_size = Math.floor(w / 2 / layers);
     const CIRCLE_SIZE = Math.floor(layer_size * 0.85);
     p5.background("black");
 
@@ -333,9 +336,7 @@ export default function PlaylistArt({
       id="playlist-art-container"
       style={{
         width: "80%",
-        height: "80%",
         maxWidth: "80vw",
-        maxHeight: "80vw",
       }}
     >
       <NextReactP5Wrapper

@@ -43,6 +43,8 @@ import Button from "@mui/material/Button";
 import TextField from "@mui/material/TextField";
 import { NumberField } from "@base-ui-components/react";
 
+import CircularProgress from "@mui/material/CircularProgress";
+
 import { msToTime } from "@/util/time";
 import { getNextTracks, chooseStartingFive } from "@/util/playlister";
 // import { app_settings } from "@/data/data";
@@ -58,6 +60,7 @@ const rate_limiter = RateLimit(20, { timeUnit: 10000 });
 
 export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   const [playlists, setPlaylists] = useState<SimplifiedPlaylist[]>([]);
+  const [searching, setSearching] = useState<boolean>(false);
   const [query, setQuery] = useState<string>("");
   const [queryDebounced] = useDebounce(query, 1000);
   const [selectedPlaylist, setSelectedPlaylist] =
@@ -187,15 +190,18 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
     try {
       if (queryDebounced) {
         (async () => {
+          setSearching(true);
           const tracks_with_data = await searchTracks(
             queryDebounced,
             rate_limiter
           );
           setSelectedPlaylistTracks(tracks_with_data);
+          setSearching(false);
         })();
       }
     } catch (e: any) {
       _setWarning(e.message);
+      setSearching(false);
     }
   }, [queryDebounced]);
 
@@ -281,7 +287,8 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           />
 
           <Tab label="My Playlists" />
-          <Tab label="Seed Selection" />
+          <Tab label="Search Tracks" />
+          <Tab label="Refine Vibes" />
           <Tab label="Generate Playlist" />
         </TabList>
         <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
@@ -492,6 +499,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               setFilters={setFilters}
               setFilterEmoji={setFilterEmoji}
               filterEmoji={filterEmoji}
+              sampleTrack={selectedTrack}
               letsGoButton={
                 <Button
                   variant="contained"
@@ -564,7 +572,14 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
         </TabPanel>
         <TabPanel value={2}>
           <Paper>
-            <div style={{ width: "100%", height: "100%" }}>
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                fontSize: "0.8rem",
+                color: "gray",
+              }}
+            >
               The track you choose here will function as the &quot;seed&quot;
               for the playlist that gets generated. Essentially, the first trip
               around the circle of fifths will start with this track as
@@ -587,12 +602,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
               </div>
             ) : (
               <>
-                <h2>Search</h2>
                 <TextField
                   label="Search"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
+                {searching && <CircularProgress size="2rem" />}
               </>
             )}
             <Paper
@@ -696,12 +711,12 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                   ))}
               </tbody>
             </table> */}
-            {filterTracks.length > 0 && (
+            {/* {filterTracks.length > 0 && (
               <PlaylistArt tracks={filterTracks} setRef={setP5} />
             )}
             {selectedPlaylistTracks.length > 0 && (
               <PlaylistArt tracks={selectedPlaylistTracks} setRef={setP5} />
-            )}
+            )} */}
           </Paper>
         </TabPanel>
         <TabPanel value={3}>

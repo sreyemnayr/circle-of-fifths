@@ -537,7 +537,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           </Paper>
         </TabPanel>
 
-        <TabPanel value={0} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={0} style={{ width: "100%", height: "100%" }}>
           <Paper>
             <div style={{ color: "#fff", width: "100%", height: "100%" }}>
               {loading}
@@ -582,7 +582,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             </table>
           </Paper>
         </TabPanel>
-        <TabPanel value={1} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={1} style={{ width: "100%", height: "100%" }}>
           <Paper>
             <div
               style={{
@@ -630,7 +630,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 flexWrap: "wrap",
                 gap: "4px",
               }}
-              className="grid grid-cols-2 lg:grid-cols-4 gap-2"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"
             >
               {(selectedPlaylistTracks && selectedPlaylistTracks.length > 0
                 ? selectedPlaylistTracks
@@ -731,7 +731,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )} */}
           </Paper>
         </TabPanel>
-        <TabPanel value={3} style={{ width: "80%", height: "100%" }}>
+        <TabPanel value={3} style={{ width: "100%", height: "100%" }}>
           <Paper sx={{ width: "100%", height: "100%" }}>
             <h2 style={{ width: "100%" }}>
               {newPlaylistTracks.length} Tracks |{" "}
@@ -798,7 +798,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                 flexWrap: "wrap",
                 gap: "4px",
               }}
-              className="grid grid-cols-2 lg:grid-cols-4 gap-2"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2"
             >
               {newPlaylistTracks.map((track) =>
                 isTrack(track.track) ? (

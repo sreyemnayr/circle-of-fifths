@@ -605,7 +605,7 @@ export const OptionsSliders = ({
             </MenuItem>
           </Select>
         </FormControl>
-        {filterEmoji !== "" && <>{letsGoButton}</>}
+        <>{letsGoButton}</>
       </Card>
 
       {sampleTrack && (

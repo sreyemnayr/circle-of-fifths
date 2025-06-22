@@ -717,7 +717,6 @@ export const OptionsSliders = ({
                 <Typography>OFF</Typography>
                 <AntSwitch
                   checked={!activeOption?.enabled}
-                  disabled={!activeOption?.enabled}
                   onChange={(e) =>
                     setOptions((cur) => {
                       const updateOption = cur.find(

@@ -525,7 +525,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           </Paper>
         </TabPanel>
 
-        <TabPanel value={1}>
+        <TabPanel value={1} style={{ width: "80%", height: "100%" }}>
           <Paper>
             <div style={{ color: "#fff", width: "100%", height: "100%" }}>
               {loading}
@@ -570,7 +570,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             </table>
           </Paper>
         </TabPanel>
-        <TabPanel value={2}>
+        <TabPanel value={2} style={{ width: "80%", height: "100%" }}>
           <Paper>
             <div
               style={{
@@ -719,9 +719,9 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             )} */}
           </Paper>
         </TabPanel>
-        <TabPanel value={3}>
+        <TabPanel value={3} style={{ width: "80%", height: "100%" }}>
           <Paper sx={{ width: "100%", height: "100%" }}>
-            <h2>
+            <h2 style={{ width: "100%" }}>
               {newPlaylistTracks.length} Tracks |{" "}
               {msToTime(
                 newPlaylistTracks

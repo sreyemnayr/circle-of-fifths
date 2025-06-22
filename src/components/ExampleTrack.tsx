@@ -20,7 +20,9 @@ export const ExampleTrack = ({
 }: IExampleTrack) => {
   return (
     <div
-      className={`flex flex-row items-center ${highlight ? "bg-blue-200" : ""}`}
+      className={`flex flex-row items-center ${
+        highlight ? "bg-blue-200 z-50" : ""
+      }`}
     >
       <div className={`text-xs mr-2.5 ${highlight ? "font-bold" : ""}`}>
         {value}

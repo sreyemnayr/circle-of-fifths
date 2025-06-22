@@ -449,6 +449,7 @@ export const OptionsSliders = ({
                     key={`${activeOption.key}-${example.name}`}
                     artist={example.artist}
                     name={example.name}
+                    highlight={example?.highlight ?? false}
                     img={example.img}
                     value={
                       displayOption(activeOption, Number(example.value)) ?? ""

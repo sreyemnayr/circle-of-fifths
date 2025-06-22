@@ -6,7 +6,7 @@ import {
   ReactNode,
 } from "react";
 import { AppSettings } from "../types";
-import { app_settings } from "../data/data";
+import { default_app_settings } from "../data/data";
 
 interface SettingsContextType {
   settings: AppSettings;
@@ -14,14 +14,14 @@ interface SettingsContextType {
 }
 
 const SettingsContext = createContext<SettingsContextType>({
-  settings: app_settings,
+  settings: default_app_settings,
   updateSettings: () => {},
 });
 
 const STORAGE_KEY = "spotifier_settings";
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(app_settings);
+  const [settings, setSettings] = useState<AppSettings>(default_app_settings);
 
   useEffect(() => {
     // Load settings from localStorage on mount

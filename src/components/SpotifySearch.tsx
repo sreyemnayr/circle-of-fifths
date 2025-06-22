@@ -164,6 +164,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
           const next_tracks = await getNextTracks(
             newPlaylistTracks,
             filters,
+            app_settings,
             remaining_tracks,
             remaining_time,
             rate_limiter
@@ -455,7 +456,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
                         htmlFor="min_time"
                         className={`cursor-ew-resize font-size-0.875rem line-height-1.25rem font-weight-500 color-var(--color-gray-900)`}
                       >
-                        Minimum time
+                        Target Duration
                       </label>
                       <NumberField.ScrubAreaCursor
                         className={`filter-drop-shadow-0-1px-1px-0008`}

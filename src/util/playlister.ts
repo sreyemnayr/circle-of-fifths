@@ -1,5 +1,9 @@
-import { RecommendationsRequest, TrackItemWithAudioFeatures } from "@/types";
-import { getRecommendedTracks, isTrack } from "./spotify";
+import {
+  AppSettings,
+  RecommendationsRequest,
+  TrackItemWithAudioFeatures,
+} from "@/types";
+import { getRecommendedTracks, isTrack, trackToString } from "./spotify";
 
 import { keyString, relativeKey } from "./keys";
 
@@ -7,19 +11,27 @@ import { PlaylistedTrack } from "@/types";
 import { nextKeys } from "./spotify";
 import { RateLimit } from "async-sema";
 
-import { app_settings } from "@/data/data";
+import { default_app_settings } from "@/data/data";
 
 export const getNextTracks = async (
   seeds: PlaylistedTrack<TrackItemWithAudioFeatures>[],
   filters: RecommendationsRequest = {},
-  remaining_tracks: number = app_settings.max_tracks,
-  remaining_time: number = app_settings.min_time,
+  app_settings: AppSettings | null,
+  remaining_tracks: number = default_app_settings.max_tracks,
+  remaining_time: number = default_app_settings.min_time,
   rate_limiter: (() => Promise<void>) | null = null
 ) => {
   if (!rate_limiter) {
     rate_limiter = RateLimit(20, { timeUnit: 10000 });
   }
+
+  if (!app_settings) {
+    app_settings = default_app_settings;
+  }
+
   const seed_ids = seeds.map((s) => s.track.id);
+  const seed_track_artist_titles = seeds.map((s) => trackToString(s));
+
   const seed_artists = seeds
     .slice(-5)
     .map((s) => ("album" in s.track ? s?.track?.album?.artists[0]?.name : ""));
@@ -40,6 +52,7 @@ export const getNextTracks = async (
     (t) =>
       isTrack(t.track) &&
       !seed_ids.includes(t.track.id) &&
+      !seed_track_artist_titles.includes(trackToString(t)) &&
       !seed_artists.includes(t?.track?.album?.artists[0]?.name) &&
       (app_settings.allow_explicit || !t.track.explicit)
   );

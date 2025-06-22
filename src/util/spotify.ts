@@ -459,3 +459,11 @@ export const getRecommendedTracks = async (
 export function isTrack(item: any): item is Track {
   return (item as Track)?.album !== undefined;
 }
+
+export function trackToString(
+  track: PlaylistedTrack<TrackItemWithAudioFeatures>
+): string {
+  return `${track.track.name} - ${
+    isTrack(track.track) ? track.track?.album?.artists?.[0]?.name : ""
+  }`;
+}

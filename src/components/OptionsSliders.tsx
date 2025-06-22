@@ -34,7 +34,9 @@ import MenuItem from "@mui/material/MenuItem";
 // import Option from "@mui/material/Option";
 import Button from "@mui/material/Button";
 import Switch from "@mui/material/Switch";
+import Stack from "@mui/material/Stack";
 import Typography from "@mui/material/Typography";
+import { styled } from "@mui/material/styles";
 
 import { msToMinutes } from "@/util/time";
 import { ExampleTrack } from "./ExampleTrack";
@@ -45,6 +47,53 @@ import Card from "@mui/material/Card";
 
 import { Mark } from "@/types";
 import InputLabel from "@mui/material/InputLabel";
+
+const AntSwitch = styled(Switch)(({ theme }) => ({
+  width: 28,
+  height: 16,
+  padding: 0,
+  display: "flex",
+  "&:active": {
+    "& .MuiSwitch-thumb": {
+      width: 15,
+    },
+    "& .MuiSwitch-switchBase.Mui-checked": {
+      transform: "translateX(9px)",
+    },
+  },
+  "& .MuiSwitch-switchBase": {
+    padding: 2,
+    "&.Mui-checked": {
+      transform: "translateX(12px)",
+      color: "#fff",
+      "& + .MuiSwitch-track": {
+        opacity: 1,
+        backgroundColor: "#1890ff",
+        ...theme.applyStyles("dark", {
+          backgroundColor: "#177ddc",
+        }),
+      },
+    },
+  },
+  "& .MuiSwitch-thumb": {
+    boxShadow: "0 2px 4px 0 rgb(0 35 11 / 20%)",
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    transition: theme.transitions.create(["width"], {
+      duration: 200,
+    }),
+  },
+  "& .MuiSwitch-track": {
+    borderRadius: 16 / 2,
+    opacity: 1,
+    backgroundColor: "rgba(0,0,0,.25)",
+    boxSizing: "border-box",
+    ...theme.applyStyles("dark", {
+      backgroundColor: "rgba(255,255,255,.35)",
+    }),
+  },
+}));
 
 export const RangeSlider = ({
   option,
@@ -634,7 +683,81 @@ export const OptionsSliders = ({
                   Reset
                 </Button>
               )}
-              <Switch
+
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Typography>Target</Typography>
+                <AntSwitch
+                  checked={activeOption?.target ?? false}
+                  onChange={(e) =>
+                    setOptions((cur) => {
+                      const updateOption = cur.find(
+                        (c) => c.key === activeOption.key
+                      );
+
+                      if (updateOption) {
+                        updateOption.target = e.target.checked;
+
+                        if (!updateOption.target) {
+                          // if the target is not set, we need to set the value to the range
+                          if (updateOption.key == "loudness") {
+                            updateOption.value = [
+                              updateOption.range[0],
+                              updateOption.range[1],
+                            ];
+                          } else {
+                            const low_distance =
+                              updateOption.value?.[0] ||
+                              updateOption.range[0] - updateOption.range[0];
+                            const high_distance =
+                              updateOption.range[1] -
+                              (updateOption.value?.[1] ||
+                                updateOption.range[1]);
+                            const min_distance = Math.min(
+                              low_distance,
+                              high_distance
+                            );
+                            updateOption.value = [
+                              Math.max(
+                                (updateOption.value?.[0] ||
+                                  updateOption.range[0]) - min_distance,
+                                updateOption.range[0]
+                              ),
+                              Math.min(
+                                (updateOption.value?.[1] ||
+                                  updateOption.range[1]) + min_distance,
+                                updateOption.range[1]
+                              ),
+                            ];
+                          }
+                        } else {
+                          // if the target is set, we need to set the value to the average of the range if they're not already set to the range
+                          if (
+                            updateOption.value?.[0] !== updateOption.range[0] ||
+                            updateOption.value?.[1] !== updateOption.range[1]
+                          ) {
+                            updateOption.value = [
+                              ((updateOption.value?.[0] ||
+                                updateOption.range[0]) +
+                                (updateOption.value?.[1] ||
+                                  updateOption.range[1])) /
+                                2,
+                              ((updateOption.value?.[0] ||
+                                updateOption.range[0]) +
+                                (updateOption.value?.[1] ||
+                                  updateOption.range[1])) /
+                                2,
+                            ];
+                          }
+                        }
+                      }
+                      return [...cur];
+                    })
+                  }
+                />
+                <Typography>Min/Max</Typography>
+              </Stack>
+
+              {/* <Switch
                 checked={activeOption?.target ?? false}
                 onChange={(e) =>
                   setOptions((cur) => {
@@ -732,9 +855,32 @@ export const OptionsSliders = ({
                   "--Switch-trackWidth": "110px",
                   "--Switch-trackHeight": "51px",
                 }}
-              />
+              /> */}
 
-              <Switch
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <Typography>Exact</Typography>
+                <AntSwitch
+                  checked={
+                    !activeOption?.target || (activeOption?.exact ?? false)
+                  }
+                  disabled={!activeOption?.target}
+                  onChange={(e) =>
+                    setOptions((cur) => {
+                      const updateOption = cur.find(
+                        (c) => c.key === activeOption.key
+                      );
+
+                      if (updateOption) {
+                        updateOption.exact = e.target.checked;
+                      }
+                      return [...cur];
+                    })
+                  }
+                />
+                <Typography>Approx</Typography>
+              </Stack>
+
+              {/* <Switch
                 disabled={!activeOption?.target}
                 checked={
                   !activeOption?.target || (activeOption?.exact ?? false)
@@ -783,7 +929,7 @@ export const OptionsSliders = ({
                   "--Switch-trackWidth": "110px",
                   "--Switch-trackHeight": "31px",
                 }}
-              />
+              /> */}
             </FormControl>
           </Card>
 

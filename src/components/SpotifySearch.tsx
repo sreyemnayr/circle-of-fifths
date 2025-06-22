@@ -747,18 +747,29 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
             {newPlaylistTracks.length > 0 && loading.includes("Saved") && (
               <PlaylistArt tracks={newPlaylistTracks} setRef={setP5} />
             )}
-            {newPlaylistTracks.map((track) =>
-              isTrack(track.track) ? (
-                <Card
-                  className="m-1 border-1 border-transparent hover:border-blue-500 transition-colors duration-300 hover:cursor-pointer"
-                  key={track.track.id}
-                >
-                  <TrackChoice track={track} />
-                </Card>
-              ) : (
-                <></>
-              )
-            )}
+            <Paper
+              variant="outlined"
+              sx={{
+                padding: "10px",
+                width: "100%",
+                flexWrap: "wrap",
+                gap: "4px",
+              }}
+              className="grid grid-cols-2 lg:grid-cols-4 gap-2"
+            >
+              {newPlaylistTracks.map((track) =>
+                isTrack(track.track) ? (
+                  <Card
+                    className="m-1 border-1 border-transparent hover:border-blue-500 transition-colors duration-300 hover:cursor-pointer"
+                    key={track.track.id}
+                  >
+                    <TrackChoice track={track} />
+                  </Card>
+                ) : (
+                  <></>
+                )
+              )}
+            </Paper>
 
             {/* <table>
               <thead>

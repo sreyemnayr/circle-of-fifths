@@ -13,7 +13,10 @@ export type PlaylistArtProps = SketchProps & {
 
 const sketch: Sketch<PlaylistArtProps> = (p5) => {
   p5.setup = () => {
-    p5.createCanvas(640, 640, p5.P2D);
+    const container = document.getElementById("playlist-art-container");
+    const rect = container?.getBoundingClientRect();
+
+    p5.createCanvas(rect?.width ?? 640, rect?.height ?? 640, p5.P2D);
     p5.noStroke();
 
     p5.colorMode(p5.HSB, 360, 100, 100, 100);
@@ -326,11 +329,20 @@ export default function PlaylistArt({
   setRef: (ref: P5CanvasInstance<PlaylistArtProps>) => void;
 }) {
   return (
-    <NextReactP5Wrapper
-      sketch={sketch}
-      tracks={tracks.slice(0, 60)}
-      style={{ width: "100px", height: "100px" }}
-      setRef={setRef}
-    />
+    <div
+      id="playlist-art-container"
+      style={{
+        width: "80%",
+        height: "80%",
+        maxWidth: "80vw",
+        maxHeight: "80vw",
+      }}
+    >
+      <NextReactP5Wrapper
+        sketch={sketch}
+        tracks={tracks.slice(0, 60)}
+        setRef={setRef}
+      />
+    </div>
   );
 }

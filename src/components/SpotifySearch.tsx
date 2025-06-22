@@ -178,6 +178,7 @@ export function SpotifySearch({ sdk }: { sdk: SpotifyApi }) {
   }, [
     newPlaylistTracks,
     filters,
+    app_settings,
     app_settings.max_tracks,
     app_settings.min_time,
   ]);

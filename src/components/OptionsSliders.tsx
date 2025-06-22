@@ -613,6 +613,7 @@ export const OptionsSliders = ({
           track={sampleTrack}
           options={options}
           setActiveOption={setActiveOption}
+          setOptions={setOptions}
         />
       )}
 
@@ -745,7 +746,7 @@ export const OptionsSliders = ({
               </Stack>
 
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Typography>Target</Typography>
+                <Typography>Min/Max</Typography>
                 <AntSwitch
                   checked={activeOption?.target ?? false}
                   onChange={(e) =>
@@ -814,7 +815,7 @@ export const OptionsSliders = ({
                     })
                   }
                 />
-                <Typography>Min/Max</Typography>
+                <Typography>Target</Typography>
               </Stack>
 
               {/* <Switch
@@ -918,7 +919,7 @@ export const OptionsSliders = ({
               /> */}
 
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <Typography>Exact</Typography>
+                <Typography>Approx</Typography>
                 <AntSwitch
                   checked={
                     !activeOption?.target || (activeOption?.exact ?? false)
@@ -937,7 +938,7 @@ export const OptionsSliders = ({
                     })
                   }
                 />
-                <Typography>Approx</Typography>
+                <Typography>Exact</Typography>
               </Stack>
 
               {/* <Switch

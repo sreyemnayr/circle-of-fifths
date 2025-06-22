@@ -22,8 +22,8 @@ export const ExampleTrack = ({
 }: IExampleTrack) => {
   return (
     <div
-      className={`flex flex-row items-center ${
-        highlight ? "bg-blue-200 z-50 pr-20" : "bg-slate-200 z-10"
+      className={`flex flex-row items-center  pr-20 ${
+        highlight ? "bg-blue-100 z-50" : "bg-slate-100 z-10"
       }`}
     >
       <div className={`text-xs mr-2.5`}>{value}</div>
@@ -113,10 +113,12 @@ export const TrackInfo = ({
   track,
   options,
   setActiveOption,
+  setOptions,
 }: {
   track: PlaylistedTrack<TrackItemWithAudioFeatures>;
   options: OptionSettings[];
   setActiveOption: Dispatch<SetStateAction<OptionSettings | null>>;
+  setOptions: Dispatch<SetStateAction<OptionSettings[]>>;
 }) => {
   return isTrack(track.track) ? (
     <div className="flex flex-col items-between relative h-full w-3/4 min-h-[120px]">
@@ -157,11 +159,24 @@ export const TrackInfo = ({
           .map((feature) => (
             <Button
               key={`${track.track.id}-${feature}`}
-              onClick={() =>
-                setActiveOption(
-                  options.find((o) => o.key === feature) as OptionSettings
-                )
-              }
+              onClick={() => {
+                setOptions((cur) => {
+                  const updateOption = cur.find((c) => c.key === feature);
+
+                  if (updateOption) {
+                    updateOption.enabled = true;
+                    updateOption.target = true;
+                    updateOption.exact = false;
+                    updateOption.value = [
+                      track.track.features?.[feature as KnownKey] || 0,
+                      track.track.features?.[feature as KnownKey] || 0,
+                    ];
+
+                    setActiveOption(updateOption);
+                  }
+                  return [...cur];
+                });
+              }}
             >
               {displayOption(
                 options.find((o) => o.key === feature) as OptionSettings,

@@ -23,7 +23,7 @@ export const ExampleTrack = ({
   return (
     <div
       className={`flex flex-row items-center  pr-20 ${
-        highlight ? "bg-blue-100 z-50" : "bg-slate-100 z-10"
+        highlight ? "bg-amber-100 z-50" : "bg-neutral-50 z-10"
       }`}
     >
       <div className={`text-xs mr-2.5`}>{value}</div>

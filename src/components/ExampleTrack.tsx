@@ -121,7 +121,7 @@ export const TrackInfo = ({
   setOptions: Dispatch<SetStateAction<OptionSettings[]>>;
 }) => {
   return isTrack(track.track) ? (
-    <div className="flex flex-col items-between relative h-full w-3/4 min-h-[120px]">
+    <div className="flex flex-col items-between relative h-full w-3/4 min-h-[160px]">
       <div className="absolute top-1 right-1 opacity-90 z-10 hover:scale-125 hover:opacity-100 transition-all duration-300">
         <a href={track?.track?.external_urls?.spotify} target="_blank">
           <img
@@ -158,6 +158,8 @@ export const TrackInfo = ({
           })
           .map((feature) => (
             <Button
+              variant="outlined"
+              size="small"
               key={`${track.track.id}-${feature}`}
               onClick={() => {
                 setOptions((cur) => {

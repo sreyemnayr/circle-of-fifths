@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const expiringAccounts = await accountsCollection
       .find({
         provider: "spotify",
+        type: "oauth",
         expires_at: { $lte: threshold },
         refresh_token: { $exists: true, $ne: null },
       })

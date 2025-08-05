@@ -51,8 +51,14 @@ const authConfig: NextAuthConfig = {
         const db = client.db("spotifier");
         const accountsCollection = db.collection("accounts");
 
+        // Convert userId to ObjectId if it's a string
+        const userId =
+          typeof token.sub === "string" && token.sub.length === 24
+            ? new (await import("mongodb")).ObjectId(token.sub)
+            : token.sub;
+
         const storedAccount = await accountsCollection.findOne({
-          userId: token.sub,
+          userId: userId,
           provider: "spotify",
         });
 
@@ -100,15 +106,22 @@ const authConfig: NextAuthConfig = {
         const db = client.db("spotifier");
         const accountsCollection = db.collection("accounts");
 
+        // Convert userId to ObjectId if it's a string
+        const userId =
+          typeof token.sub === "string" && token.sub.length === 24
+            ? new (await import("mongodb")).ObjectId(token.sub)
+            : token.sub;
+
         await accountsCollection.updateOne(
           {
-            userId: token.sub,
+            userId: userId,
             provider: "spotify",
           },
           {
             $set: {
-              userId: token.sub,
+              userId: userId,
               provider: "spotify",
+              type: "oauth",
               providerAccountId: account.providerAccountId,
               access_token: account.access_token,
               refresh_token: account.refresh_token,

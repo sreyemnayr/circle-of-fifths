@@ -10,6 +10,16 @@ if (!process.env.SPOTIFY_CLIENT_SECRET) {
   throw new Error("Missing SPOTIFY_CLIENT_SECRET");
 }
 
+export interface SpotifierJWT extends JWT {
+  access_token?: string;
+  token_type?: string;
+  expires_at?: number;
+  expires_in?: number;
+  refresh_token?: string;
+  scope?: string;
+  id?: string;
+}
+
 // import { IHandleErrors } from "@spotify/web-api-ts-sdk";
 
 // import clientPromise from "@/lib/mongodb";
@@ -57,6 +67,7 @@ const spotifyProfile = SpotifyProvider({
 // console.log(credentials)
 
 const authURL = new URL("https://accounts.spotify.com/authorize");
+const refreshURL = new URL("https://accounts.spotify.com/api/token");
 
 const scopes = [
   "user-read-email",
@@ -79,14 +90,25 @@ spotifyProfile.authorization = authURL.toString();
 
 export default spotifyProfile;
 
-export async function refreshAccessToken(token: JWT) {
+export async function refreshAccessToken(token: SpotifierJWT) {
   try {
-    const response = await fetch(authURL, {
+    if (!token.refresh_token) {
+      throw new Error("No refresh token found");
+    }
+
+    const payload = {
+      method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
       },
-      method: "POST",
-    });
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: token.refresh_token,
+        client_id: process.env.SPOTIFY_CLIENT_ID ?? "",
+      }),
+    };
+
+    const response = await fetch(refreshURL, payload);
 
     const refreshedTokens = await response.json();
 
@@ -98,8 +120,8 @@ export async function refreshAccessToken(token: JWT) {
       ...token,
       access_token: refreshedTokens.access_token,
       token_type: refreshedTokens.token_type,
-      expires_at: refreshedTokens.expires_at,
-      expires_in: (refreshedTokens.expires_at ?? 0) - Date.now() / 1000,
+      expires_at: refreshedTokens.expires_in + Date.now() / 1000,
+      expires_in: refreshedTokens.expires_in,
       refresh_token: refreshedTokens.refresh_token ?? token.refresh_token,
       scope: refreshedTokens.scope,
     };
@@ -107,6 +129,7 @@ export async function refreshAccessToken(token: JWT) {
     console.error(error);
     return {
       ...token,
+      error_data: error,
       error: "RefreshAccessTokenError",
     };
   }

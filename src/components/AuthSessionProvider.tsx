@@ -8,8 +8,15 @@ import CssBaseline from "@mui/material/CssBaseline";
 //import getInitColorSchemeScript from "@mui/system/cssVars/getInitColorSchemeScript";
 // import { getInitColorSchemeScript } from "@mui/material/styles";
 import Button from "@mui/material/Button";
+import { useTokenRefresh } from "@/hooks/useTokenRefresh";
 
 const baseUrl = "https://www.fifths.xyz";
+
+// Wrapper component to handle token refresh
+function TokenRefreshWrapper({ children }: { children: React.ReactNode }) {
+  useTokenRefresh();
+  return <>{children}</>;
+}
 
 function AuthSessionProvider({
   session,
@@ -59,7 +66,9 @@ function AuthSessionProvider({
         baseUrl={baseUrl}
         basePath={`/api/nextauth`}
       >
-        <SettingsProvider>{children}</SettingsProvider>
+        <TokenRefreshWrapper>
+          <SettingsProvider>{children}</SettingsProvider>
+        </TokenRefreshWrapper>
       </SessionProvider>
     </>
   );

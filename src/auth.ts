@@ -1,14 +1,17 @@
 import NextAuth, { NextAuthConfig, Account } from "next-auth";
 import { MongoDBAdapter } from "@auth/mongodb-adapter";
-import spotifyProfile, { refreshAccessToken } from "@/SpotifyProfile";
+import spotifyProfile, {
+  refreshAccessToken,
+  SpotifierJWT,
+} from "@/SpotifyProfile";
 import { JWT } from "next-auth/jwt";
 import clientPromise from "@/lib/mongodb";
 
 const client = await clientPromise;
 
 export type AuthUser = {
-  name: string;
-  email: string;
+  name?: string | null;
+  email?: string | null;
   image: string;
   access_token: string;
   token_type: string;
@@ -43,6 +46,40 @@ const authConfig: NextAuthConfig = {
   callbacks: {
     async jwt({ token, account }: { token: JWT; account: Account | null }) {
       if (!account) {
+        // Check if we have a stored account in the database for this user
+        const client = await clientPromise;
+        const db = client.db("spotifier");
+        const accountsCollection = db.collection("accounts");
+
+        const storedAccount = await accountsCollection.findOne({
+          userId: token.sub,
+          provider: "spotify",
+        });
+
+        if (storedAccount) {
+          // Use the stored account data (which may have been refreshed by the cron job)
+          const updatedToken: SpotifierJWT = {
+            ...token,
+            access_token: storedAccount.access_token,
+            token_type: storedAccount.token_type,
+            expires_at: storedAccount.expires_at,
+            expires_in: storedAccount.expires_at - Date.now() / 1000,
+            refresh_token: storedAccount.refresh_token,
+            scope: storedAccount.scope,
+            id: storedAccount.providerAccountId,
+          };
+
+          // If token is expired, try to refresh it
+          if (
+            Date.now() / 1000 >= (updatedToken.expires_at ?? 0) &&
+            updatedToken.refresh_token
+          ) {
+            return refreshAccessToken(updatedToken);
+          }
+
+          return updatedToken;
+        }
+
         return token;
       }
 

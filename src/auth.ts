@@ -23,7 +23,7 @@ export type AuthUser = {
 };
 
 const authConfig: NextAuthConfig = {
-  adapter: MongoDBAdapter(client),
+  adapter: MongoDBAdapter(client, { databaseName: "spotifier" }),
   providers: [spotifyProfile],
 
   session: {
@@ -93,6 +93,33 @@ const authConfig: NextAuthConfig = {
         scope: account?.scope,
         id: account?.providerAccountId,
       };
+
+      // Manually create/update the account in the database since we're using JWT strategy
+      if (account?.access_token && account?.refresh_token) {
+        const client = await clientPromise;
+        const db = client.db("spotifier");
+        const accountsCollection = db.collection("accounts");
+
+        await accountsCollection.updateOne(
+          {
+            userId: token.sub,
+            provider: "spotify",
+          },
+          {
+            $set: {
+              userId: token.sub,
+              provider: "spotify",
+              providerAccountId: account.providerAccountId,
+              access_token: account.access_token,
+              refresh_token: account.refresh_token,
+              expires_at: account.expires_at,
+              token_type: account.token_type,
+              scope: account.scope,
+            },
+          },
+          { upsert: true }
+        );
+      }
 
       if (Date.now() / 1000 - 60 * 30 >= updatedToken.expires_at) {
         return refreshAccessToken(updatedToken);

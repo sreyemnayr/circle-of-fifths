@@ -63,6 +63,16 @@ const authConfig: NextAuthConfig = {
         });
 
         if (storedAccount) {
+          // Check if the stored account has valid tokens
+          if (!storedAccount.access_token || !storedAccount.refresh_token) {
+            // Tokens are empty/null, signal re-authentication needed
+            return {
+              ...token,
+              error: "RefreshAccessTokenError",
+              error_description: "Tokens cleared, re-authentication required",
+            };
+          }
+
           // Use the stored account data (which may have been refreshed by the cron job)
           const updatedToken: SpotifierJWT = {
             ...token,
@@ -141,6 +151,12 @@ const authConfig: NextAuthConfig = {
       return updatedToken;
     },
     async session({ session, token }: { session: any; token: any }) {
+      // If there's an error in the token, pass it to the session
+      if (token?.error) {
+        session.error = token.error;
+        session.error_description = token.error_description;
+      }
+
       const user: AuthUser = {
         ...session?.user,
         access_token: token?.access_token,

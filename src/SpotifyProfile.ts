@@ -126,7 +126,44 @@ export async function refreshAccessToken(token: SpotifierJWT) {
       scope: refreshedTokens.scope,
     };
   } catch (error) {
-    console.error(error);
+    console.error("Error refreshing access token:", error);
+
+    // If it's an invalid grant error, the refresh token is invalid
+    if (
+      error &&
+      typeof error === "object" &&
+      "error" in error &&
+      error.error === "invalid_grant"
+    ) {
+      console.log("Invalid grant - refresh token is invalid, clearing account");
+
+      // Clear the tokens from the account in database
+      try {
+        const client = await import("@/lib/mongodb").then((m) => m.default);
+        const db = (await client).db("spotifier");
+        const accountsCollection = db.collection("accounts");
+
+        // Clear the tokens but keep the account record
+        await accountsCollection.updateOne(
+          {
+            refresh_token: token.refresh_token,
+            provider: "spotify",
+          },
+          {
+            $set: {
+              access_token: null,
+              refresh_token: null,
+              expires_at: null,
+              token_type: null,
+              scope: null,
+            },
+          }
+        );
+      } catch (dbError) {
+        console.error("Failed to clear invalid tokens:", dbError);
+      }
+    }
+
     return {
       ...token,
       error_data: error,

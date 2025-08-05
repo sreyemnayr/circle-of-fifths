@@ -66,6 +66,29 @@ export async function GET(request: NextRequest) {
         const errorMsg = `Failed to refresh token for user ${account.userId}: ${error}`;
         refreshResults.errors.push(errorMsg);
         console.error(errorMsg);
+
+        // If it's an invalid grant error, clear the tokens but keep the account
+        if (
+          error &&
+          typeof error === "object" &&
+          "message" in error &&
+          typeof error.message === "string" &&
+          error.message.includes("invalid_grant")
+        ) {
+          console.log(`Clearing invalid tokens for user ${account.userId}`);
+          await accountsCollection.updateOne(
+            { _id: account._id },
+            {
+              $set: {
+                access_token: null,
+                refresh_token: null,
+                expires_at: null,
+                token_type: null,
+                scope: null,
+              },
+            }
+          );
+        }
       }
     }
 

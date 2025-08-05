@@ -1,4 +1,4 @@
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useRef } from "react";
 import type { AuthUser } from "@/auth";
 
@@ -7,6 +7,17 @@ export function useTokenRefresh() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Check for authentication errors
+    const sessionWithError = session as any;
+    if (sessionWithError?.error === "RefreshAccessTokenError") {
+      console.log(
+        "Authentication error detected, signing out:",
+        sessionWithError.error_description
+      );
+      signOut();
+      return;
+    }
+
     const user = session?.user as AuthUser | undefined;
     if (!user?.expires_at) return;
 
@@ -32,7 +43,7 @@ export function useTokenRefresh() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [session, update]);
+  }, [session, update, signOut]);
 
   return { session };
 }
